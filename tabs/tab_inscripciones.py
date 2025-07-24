@@ -1,14 +1,16 @@
 # proyecto/tabs/tab_inscripciones.py
 
-from PySide6.QtCore import Qt, QTime, QEvent
+from PySide6.QtCore import Qt, QTime, QEvent, Signal, QObject
 from PySide6.QtWidgets import (
     QWidget, QGridLayout, QComboBox, QLineEdit, QLabel,
     QTableWidget, QPushButton, QCheckBox, QHeaderView,
-    QMessageBox, QTableWidgetItem
+    QMessageBox, QTableWidgetItem, QApplication
 )
 
-class TabInscripciones:
+class TabInscripciones(QObject):
+    inscripciones_changed = Signal()
     def __init__(self, db):
+        super().__init__()
         self.db = db
         self.widget = QWidget()
         self.ya_curso = {}  # almacena tuplas (yaA, yaB) por matrícula
@@ -532,6 +534,7 @@ class TabInscripciones:
         self.cargar_optativas_a_tab3()
         self.cargar_optativas_b_tab3()           # <— añadida
         self._control_optativas_a_b_habilitadas()
+        self.inscripciones_changed.emit()
 
     def inscribir_optativa_b(self):
         est = self.table_estudiantes_tab3.currentRow()
@@ -581,6 +584,7 @@ class TabInscripciones:
         self.cargar_optativas_b_tab3()
         self.cargar_optativas_a_tab3()           # <— añadida
         self._control_optativas_a_b_habilitadas()
+        self.inscripciones_changed.emit()
 
     def quitar_inscrita(self):
         fila = self.table_inscritas_tab3.currentRow()
@@ -610,6 +614,7 @@ class TabInscripciones:
         self.cargar_optativas_a_tab3()
         self.cargar_optativas_b_tab3()
         self._control_optativas_a_b_habilitadas()
+        self.inscripciones_changed.emit()
 
     def times_overlap(self, start1, end1, start2, end2):
         t1_start = QTime.fromString(start1, "HH:mm")

@@ -182,6 +182,7 @@ class MainWindow(QMainWindow):
 
         # Estadísticas de inscripciones
         self.tab_estad = TabEstadisticas(self.db)
+        self.tab_opt.optativas_changed.connect(self.tab_estad.cargar_estadisticas)
         self.tabWidget.addTab(self.tab_estad.widget, "ESTADÍSTICAS")
 
         # Carga inicial de datos
@@ -189,6 +190,7 @@ class MainWindow(QMainWindow):
         self.tab_doc.cargar_profesores_tab1()
         self.tab_opt.cargar_optativas()
         self.tab_ins.cargar_estudiantes_tab3()
+        self.tab_ins.inscripciones_changed.connect(self.tab_estad.cargar_estadisticas)
 
         # Menú Créditos
         action_creditos = QAction("Créditos", self)
