@@ -5,13 +5,13 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+import csv
+from PySide6.QtCore import Qt, QRegularExpression
+from PySide6.QtGui import QFont, QRegularExpressionValidator
 from PySide6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QComboBox, QPushButton,
     QTableWidget, QTableWidgetItem, QMessageBox, QFileDialog
 )
-import csv
 from utils import obtener_ruta
 
 
@@ -26,12 +26,14 @@ class TabEstudiantes:
         self._setup_ui()
         self._connect_signals()
 
-        # No admin: ajustes iniciales
+        # Ajustes iniciales para no-admin: matrícula editable al agregar
         if not self.is_admin:
-            self.line_matricula.setReadOnly(True)
+            # no bloquear aquí la matrícula
             self.combo_semestre_est.setEnabled(True)
             self.btn_quitar_estudiante.hide()
             self.btn_editar_estudiante.setGeometry(1170, 460, 151, 31)
+        else:
+            self.line_matricula.setReadOnly(False)
 
     # ---------------------- UI ----------------------
     def _setup_ui(self):
@@ -143,8 +145,11 @@ class TabEstudiantes:
         )
         self.line_apellido_mat_est.setPlaceholderText("APELLIDO MATERNO")
 
-        # >>>>>>>>>>>> CAMBIO 1: stylesheet con :disabled
+        # >>> Cambio: matrícula con stylesheet para disabled
         self.line_matricula = QLineEdit(self._tab)
+        self.line_matricula.setMaxLength(10)
+        validator = QRegularExpressionValidator(QRegularExpression("[A-Za-z0-9]*"))
+        self.line_matricula.setValidator(validator)
         self.line_matricula.setGeometry(330, 590, 191, 26)
         self.line_matricula.setFont(QFont("Noto Sans", 8, QFont.Weight.Bold))
         self.line_matricula.setStyleSheet(
@@ -154,9 +159,8 @@ class TabEstudiantes:
             "border:none; border-bottom:2px solid #b3b3b3;}"
         )
         self.line_matricula.setPlaceholderText("MATRÍCULA")
-        # <<<<<<<<<<<<<<<
 
-        # >>>>>>>>>>>> CAMBIO 1 bis: stylesheet con :disabled
+        # >>> Cambio: semestre con stylesheet para disabled
         self.combo_semestre_est = QComboBox(self._tab)
         self.combo_semestre_est.setGeometry(600, 540, 201, 32)
         self.combo_semestre_est.setFont(QFont("Noto Sans", 8, QFont.Weight.Bold))
@@ -167,7 +171,6 @@ class TabEstudiantes:
             "border:1.5px solid #b3b3b3;}"
         )
         self.combo_semestre_est.addItems(["1°", "2°", "3°", "4°", "5°", "6°", "7°"])
-        # <<<<<<<<<<<<<<<
 
         self.combo_estado = QComboBox(self._tab)
         self.combo_estado.setGeometry(600, 590, 201, 32)
@@ -202,7 +205,6 @@ class TabEstudiantes:
         if not self.is_admin:
             self.btn_cargar_estudiantes_csv.hide()
 
-    # ---------------------- Señales ----------------------
     def _connect_signals(self):
         self.line_buscar_estudiante.textChanged.connect(self.filtrar_estudiantes)
         self.combo_filtrar_estudiantes.currentTextChanged.connect(self.filtrar_estudiantes)
@@ -212,19 +214,12 @@ class TabEstudiantes:
         if self.is_admin:
             self.btn_cargar_estudiantes_csv.clicked.connect(self.cargar_estudiantes_csv)
 
-    # ---------------------- Internos ----------------------
     def _bloquear_campos_admin_only(self, bloquear: bool):
-        # >>>>>>>>>>>> CAMBIO 2: aquí se deshabilitan / habilitan
-        if bloquear:
-            self.line_matricula.setDisabled(True)
-            self.combo_semestre_est.setDisabled(True)
-        else:
-            self.line_matricula.setDisabled(False)
-            self.line_matricula.setReadOnly(True)
-            self.combo_semestre_est.setDisabled(False)
-        # <<<<<<<<<<<<<<
+        """Sólo para no-admin: deshabilita matrícula y semestre."""
+        if not self.is_admin:
+            self.line_matricula.setDisabled(bloquear)
+            self.combo_semestre_est.setDisabled(bloquear)
 
-    # ---------------------- Lógica ----------------------
     def cargar_estudiantes(self):
         self.table_estudiantes.setRowCount(0)
         query = """
@@ -277,14 +272,16 @@ class TabEstudiantes:
                     "UPDATE estudiantes SET nombre=?, apellido_paterno=?, apellido_materno=?, estado=? WHERE matricula=?",
                     (nom, ap_pat, ap_mat, est, mat)
                 )
+
             self.editando_estudiante = False
             self.fila_editando_estudiante = -1
-            self.btn_agregar_estudiante.setText("AGREGAR")
 
-            # >>>>>>>>>>>> CAMBIO 3: restaurar al modo agregar (no-admin)
+            # Restaurar campos al modo agregar
             if not self.is_admin:
-                self._bloquear_campos_admin_only(False)
-            # <<<<<<<<<<<<<<
+                self.line_matricula.setReadOnly(False)
+                self.combo_semestre_est.setEnabled(True)
+
+            self.btn_agregar_estudiante.setText("AGREGAR")
 
         else:
             try:
@@ -295,7 +292,7 @@ class TabEstudiantes:
             except Exception:
                 return
 
-        # Limpia
+        # Limpieza y recarga
         self.line_matricula.clear()
         self.line_nombre_est.clear()
         self.line_apellido_pat_est.clear()
@@ -339,13 +336,10 @@ class TabEstudiantes:
         self.fila_editando_estudiante = fila
         self.btn_agregar_estudiante.setText("ACEPTAR")
 
-        # >>>>>>>>>>>> CAMBIO 4: deshabilitar en modo edición si no-admin
+        # Bloquear matrícula y semestre en modo edición
         if not self.is_admin:
-            self._bloquear_campos_admin_only(True)
-        else:
-            self.line_matricula.setReadOnly(False)
-            self.combo_semestre_est.setEnabled(True)
-        # <<<<<<<<<<<<<<
+            self.line_matricula.setReadOnly(True)
+            self.combo_semestre_est.setEnabled(False)
 
     def quitar_estudiante(self):
         fila = self.table_estudiantes.currentRow()

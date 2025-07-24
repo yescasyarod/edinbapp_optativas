@@ -40,7 +40,13 @@ class TabListas:
         lay.addWidget(lbl2)
 
         self.combo_ciclo_listas = QComboBox()
-        self.combo_ciclo_listas.addItems(["2024-2025/2", "2025-2026/1"])
+        from datetime import datetime
+        año_actual = datetime.now().year
+        items = [
+            f"{año_actual - 1}-{año_actual}/2",
+            f"{año_actual}-{año_actual + 1}/1"
+        ]
+        self.combo_ciclo_listas.addItems(items)
         self.combo_ciclo_listas.setFixedWidth(250)
         lay.addWidget(self.combo_ciclo_listas, alignment=Qt.AlignmentFlag.AlignCenter)
 

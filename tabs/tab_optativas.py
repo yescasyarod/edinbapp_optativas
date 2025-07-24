@@ -49,6 +49,9 @@ class TabOptativas:
 
         self.btn_cargar_optativas_a = QPushButton("Cargar Optativas A (csv)")
         la.addWidget(self.btn_cargar_optativas_a)
+        self.buscar_optativa_a = QLineEdit()
+        self.buscar_optativa_a.setPlaceholderText("Buscar optativa…")
+        la.addWidget(self.buscar_optativa_a)
         la.addWidget(QLabel("Optativas A", alignment=Qt.AlignmentFlag.AlignCenter))
 
         self.optativas_listado_a = QTableWidget()
@@ -86,6 +89,9 @@ class TabOptativas:
 
         self.btn_cargar_optativas_b = QPushButton("Cargar Optativas B (csv)")
         lb.addWidget(self.btn_cargar_optativas_b)
+        self.buscar_optativa_b = QLineEdit()
+        self.buscar_optativa_b.setPlaceholderText("Buscar optativa…")
+        lb.addWidget(self.buscar_optativa_b)
         lb.addWidget(QLabel("Optativas B", alignment=Qt.AlignmentFlag.AlignCenter))
 
         self.optativas_listado_b = QTableWidget()
@@ -106,6 +112,10 @@ class TabOptativas:
         lb.addLayout(btns_b)
 
         self.tabs.addTab(tab_b, "Optativas B")
+
+        if not self.is_admin:
+            self.quitar_optativa_a.hide()
+            self.quitar_optativa_b.hide()
 
         self.optativas_listado_b.setAlternatingRowColors(True)
         self.optativas_listado_b.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -241,11 +251,30 @@ class TabOptativas:
 
         self._aplicar_paridad_semestres()
 
+    def _bloquear_docentes_y_semestres(self, bloquear: bool):
+        # Bloquear tablas de docentes
+        self.listado_docentes.setDisabled(bloquear)
+        self.listado_segundo_docentes.setDisabled(bloquear)
+        self.check_segundo_docente.setDisabled(bloquear)
+        self.buscar_docente.setDisabled(bloquear)
+        # Bloquear checkboxes de semestres
+        for cb in self.semestre_checkboxes:
+            cb.setDisabled(bloquear)
+        # Visualmente: cambia el estilo para que se note desactivado
+        style = (
+            "background-color: #e0e0e0; color: #a0a0a0;"
+            if bloquear else
+            "background-color: #d9dced; alternate-background-color: #e8eaf4; color: rgb(12,28,140);"
+        )
+        self.listado_docentes.setStyleSheet(style)
+        self.listado_segundo_docentes.setStyleSheet(style)
     # ─────────────────────────── Señales ───────────────────────────
     def _connect_signals(self):
         # CSV
         self.btn_cargar_optativas_a.clicked.connect(self.cargar_optativas_a_csv)
         self.btn_cargar_optativas_b.clicked.connect(self.cargar_optativas_b_csv)
+        self.buscar_optativa_a.textChanged.connect(self.filtrar_optativas_a)
+        self.buscar_optativa_b.textChanged.connect(self.filtrar_optativas_b)
 
         # Edit / Quitar
         self.editar_optativa_a.clicked.connect(self.edit_optativa_a)
@@ -279,6 +308,19 @@ class TabOptativas:
         if idx >= 0:
             self.combo_ciclo_escolar.setCurrentIndex(idx)
 
+    def filtrar_optativas_a(self, texto: str):
+        self._filtrar_optativas(self.optativas_listado_a, texto)
+
+    def filtrar_optativas_b(self, texto: str):
+        self._filtrar_optativas(self.optativas_listado_b, texto)
+
+    def _filtrar_optativas(self, table: QTableWidget, texto: str):
+        texto = texto.lower().strip()
+        for row in range(table.rowCount()):
+            item = table.item(row, 0)  # columna “Optativa”
+            match = texto in item.text().lower() if item else False
+            table.setRowHidden(row, not match)
+            
     def _aplicar_paridad_semestres(self):
         """Muestra sólo semestres pares si el ciclo termina en '/2', impares si '/1'."""
         texto = self.combo_ciclo_escolar.currentText()
@@ -287,8 +329,10 @@ class TabOptativas:
             numero = int(cb.text().replace("°", ""))
             mostrar = (numero % 2 == 0) if es_par else (numero % 2 == 1)
             cb.setVisible(mostrar)
-            if not mostrar:
-                cb.setChecked(False)
+            # Solo desmarcar si NO estamos editando y bloqueando campos
+            if not (self.editando_optativa and cb.isEnabled() is False):
+                if not mostrar:
+                    cb.setChecked(False)
 
     def _toggle_segundo_docente(self, checked: bool):
         self.listado_segundo_docentes.setVisible(checked)
@@ -388,7 +432,7 @@ class TabOptativas:
         salon = self.salones.currentText().strip()
 
         sem_checked = [cb.text() for cb in self.semestre_checkboxes if cb.isChecked()]
-        semestres_str = ", ".join(sem_checked)
+        semestres_str = ",".join(sem_checked)
 
         if self.editando_optativa and self.editando_optativa_tipo == tipo:
             count_ins = self.db.run_query(
@@ -437,6 +481,7 @@ class TabOptativas:
         self.agregar_optativa.setText("Agregar")
 
         self._aplicar_paridad_semestres()
+        self._bloquear_docentes_y_semestres(False)
 
     def optativa_a_quitada(self):
         fila = self.optativas_listado_a.currentRow()
@@ -480,6 +525,7 @@ class TabOptativas:
 
     def _edit_optativa(self, table, fila, tipo):
         self.editando_optativa = True
+        self._bloquear_docentes_y_semestres(True)
         self.editando_optativa_tipo = tipo
         self.editando_optativa_id = int(table.item(fila, 8).text())
         self.agregar_optativa.setText("Aceptar")
