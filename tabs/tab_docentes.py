@@ -4,14 +4,17 @@
 import os
 import sys
 import csv
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import (
+
+# Permite importar utils desde el nivel superior
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QPushButton,
     QTableWidget, QTableWidgetItem, QMessageBox, QFileDialog
 )
-# Permite importar utils desde el nivel superior
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from utils import obtener_ruta
 
 
@@ -98,9 +101,7 @@ class TabDocentes:
         # Sección AGREGAR
         self.label_agregar_docente = QLabel("AGREGAR DOCENTE", self._tab)
         self.label_agregar_docente.setGeometry(40, 500, 231, 25)
-        self.label_agregar_docente.setFont(
-            QFont("Noto Sans", 12, QFont.Weight.Bold)
-        )
+        self.label_agregar_docente.setFont(QFont("Noto Sans", 12, QFont.Weight.Bold))
         self.label_agregar_docente.setStyleSheet("color: rgb(12,28,140);")
 
         # Campos de entrada
@@ -150,13 +151,9 @@ class TabDocentes:
         )
 
         # Botón CARGAR CSV (solo admin)
-        self.btn_cargar_docentes = QPushButton(
-            "CARGAR DOCENTES (CSV)", self._tab
-        )
+        self.btn_cargar_docentes = QPushButton("CARGAR DOCENTES (CSV)", self._tab)
         self.btn_cargar_docentes.setGeometry(1050, 640, 271, 29)
-        self.btn_cargar_docentes.setFont(
-            QFont("Noto Sans", 8, QFont.Weight.Bold)
-        )
+        self.btn_cargar_docentes.setFont(QFont("Noto Sans", 8, QFont.Weight.Bold))
         self.btn_cargar_docentes.setStyleSheet(
             "border:1.5px solid #0c1c8c; border-radius:12; "
             "color: rgb(12,28,140); background-color:white;"

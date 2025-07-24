@@ -1,7 +1,7 @@
 # proyecto/tabs/tab_inscripciones.py
 
-from PyQt6.QtCore import Qt, QTime
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, QTime
+from PySide6.QtWidgets import (
     QWidget, QGridLayout, QComboBox, QLineEdit, QLabel,
     QTableWidget, QPushButton, QCheckBox, QHeaderView,
     QMessageBox, QTableWidgetItem
@@ -21,7 +21,6 @@ class TabInscripciones:
         self.cargar_estudiantes_tab3()
         if self.table_estudiantes_tab3.rowCount() > 0:
             self.table_estudiantes_tab3.selectRow(0)
-
 
     def _setup_ui(self):
         grid = QGridLayout(self.widget)
@@ -145,7 +144,9 @@ class TabInscripciones:
     def cargar_estudiantes_tab3(self):
         self.table_estudiantes_tab3.setRowCount(0)
         all_students = self.db.run_query(
-            "SELECT matricula, nombre, apellido_paterno, apellido_materno, semestre, estado FROM estudiantes WHERE estado='Activo' ORDER BY nombre, apellido_paterno, apellido_materno",
+            "SELECT matricula, nombre, apellido_paterno, apellido_materno, semestre, estado "
+            "FROM estudiantes WHERE estado='Activo' "
+            "ORDER BY nombre, apellido_paterno, apellido_materno",
             fetch="all"
         )
         # map matrícula -> tipos inscritos
@@ -222,10 +223,7 @@ class TabInscripciones:
             (mat,), fetch="all"
         )
         for i, (opt, dia, hi, hf, d1n, d1p, d1m, d2n, d2p, d2m) in enumerate(rows):
-            if d2n:
-                docente = f"{d1n} {d1p} {d1m} & {d2n} {d2p} {d2m}"
-            else:
-                docente = f"{d1n} {d1p} {d1m}"
+            docente = f"{d1n} {d1p} {d1m}" + (f" & {d2n} {d2p} {d2m}" if d2n else "")
             self.table_inscritas_tab3.insertRow(i)
             self.table_inscritas_tab3.setItem(i, 0, QTableWidgetItem(mat))
             self.table_inscritas_tab3.setItem(i, 1, QTableWidgetItem(opt))
@@ -276,11 +274,13 @@ class TabInscripciones:
         mat = self.table_estudiantes_tab3.item(row, 0).text()
         # inscripciones A/B actuales para chequear solapamientos
         insA = self.db.run_query(
-            "SELECT o.dia, o.inicio, o.fin FROM inscripciones i JOIN optativas o ON i.optativa_id=o.id WHERE i.matricula=? AND o.tipo='A'",
+            "SELECT o.dia, o.inicio, o.fin FROM inscripciones i "
+            "JOIN optativas o ON i.optativa_id=o.id WHERE i.matricula=? AND o.tipo='A'",
             (mat,), fetch="all"
         )
         insB = self.db.run_query(
-            "SELECT o.dia, o.inicio, o.fin FROM inscripciones i JOIN optativas o ON i.optativa_id=o.id WHERE i.matricula=? AND o.tipo='B'",
+            "SELECT o.dia, o.inicio, o.fin FROM inscripciones i "
+            "JOIN optativas o ON i.optativa_id=o.id WHERE i.matricula=? AND o.tipo='B'",
             (mat,), fetch="all"
         )
         # para cada listado, deshabilitar filas en conflicto

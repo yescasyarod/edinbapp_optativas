@@ -3,15 +3,18 @@
 
 import sys
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-from PyQt6.QtWidgets import (
+# ── Qt ──────────────────────────────────────────────────────────
+from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
     QTabWidget, QMessageBox, QDialog, QLineEdit, QPushButton
 )
-from PyQt6.QtGui import QIcon, QAction, QFontDatabase, QFont
-from PyQt6.QtCore import QSettings, Qt
+from PySide6.QtGui import QIcon, QAction, QFontDatabase, QFont
+from PySide6.QtCore import QSettings, Qt
 
+# ── Tu código ───────────────────────────────────────────────────
 from base_datos import Database
 from crear_listas import creacion_de_listas
 from utils import obtener_ruta, obtener_ruta_bd, SEMESTRE_MAPA
@@ -178,9 +181,6 @@ class MainWindow(QMainWindow):
         self.tab_opt.cargar_optativas()
         self.tab_ins.cargar_estudiantes_tab3()
 
-        # — No se ocultan pestañas, solo botones en las tabs —
-        # (Eliminado bloque que quitaba pestañas para optativas)
-
         # Menú Créditos
         action_creditos = QAction("Créditos", self)
         action_creditos.triggered.connect(self.mostrar_creditos)
@@ -193,7 +193,7 @@ class MainWindow(QMainWindow):
             "Desarrollador: Yarod Yescas Cupich\n"
             "Diseñadora de la Interfaz: Karen\n"
             "Asesor del proyecto: David Perrusquía González\n\n"
-            "Esta aplicación utiliza la biblioteca Qt a través de PyQt6.\n"
+            "Esta aplicación utiliza la biblioteca Qt a través de PySide6.\n"
             "Qt está licenciada bajo LGPLv3.\n"
             "Las bibliotecas Qt usadas están enlazadas dinámicamente y pueden ser reemplazadas.\n"
             "Puede consultar los términos completos de la licencia en:\n"
@@ -241,6 +241,8 @@ class MainWindow(QMainWindow):
         ]
         for q in queries:
             self.db.run_query(q)
+
+        # Asegurar columna rfc_segundo_docente si migraste desde una versión vieja
         pragma = self.db.run_query("PRAGMA table_info(optativas)", fetch="all")
         cols = [c[1] for c in pragma]
         if "rfc_segundo_docente" not in cols:
@@ -252,39 +254,34 @@ class MainWindow(QMainWindow):
                 pass
 
 
+def load_font(rel_path: str):
+    """Registra una fuente y devuelve el nombre de familia que Qt reconoce."""
+    font_path = Path(__file__).parent / rel_path
+    if not font_path.exists():
+        print(f"[WARN] No se encontró la fuente: {font_path}")
+        return None
+    fid = QFontDatabase.addApplicationFont(str(font_path))
+    if fid == -1:
+        print(f"[ERR] Falló addApplicationFont para {font_path}")
+        return None
+    families = QFontDatabase.applicationFontFamilies(fid)
+    return families[0] if families else None
+
+
 if __name__ == "__main__":
     load_dotenv()  # requiere python-dotenv y un .env en la raíz
     app = QApplication(sys.argv)
 
     # ─────────────────────────────────────────────────────────────
-    #  Cargar fuente Noto Sans (o la que tengas) embebida
+    #  Cargar fuente embebida
     # ─────────────────────────────────────────────────────────────
-    from pathlib import Path
-    from PyQt6.QtGui import QFontDatabase, QFont
-
-    def load_font(rel_path: str) -> str | None:
-        """Registra una fuente y devuelve el nombre de familia que Qt reconoce."""
-        font_path = Path(__file__).parent / rel_path
-        if not font_path.exists():
-            print(f"[WARN] No se encontró la fuente: {font_path}")
-            return None
-        fid = QFontDatabase.addApplicationFont(str(font_path))
-        if fid == -1:
-            print(f"[ERR] Falló addApplicationFont para {font_path}")
-            return None
-        families = QFontDatabase.applicationFontFamilies(fid)
-        return families[0] if families else None
-
-    # Ajusta la ruta a donde realmente pusiste tu .ttf
     noto_family = load_font("fuentes/NotoSans-VariableFont.ttf")
-
     if noto_family:
-        # Forzar la fuente por defecto de toda la app (tamaño a gusto)
         app.setFont(QFont(noto_family, 12))
     else:
         print("[INFO] Usando la fuente del sistema porque no se pudo registrar Noto Sans.")
 
-    # 🔽 Forzar texto negro en tablas (tu código original)
+    # 🔽 Forzar texto negro en tablas
     app.setStyleSheet("""
         QTableWidget, QTableWidget QTableView, QTableWidget::item {
             color: black;

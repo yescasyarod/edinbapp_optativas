@@ -3,8 +3,8 @@
 import csv
 from datetime import datetime
 
-from PyQt6.QtCore import Qt, QTime
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, QTime
+from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QTabWidget, QGridLayout,
     QPushButton, QLabel, QLineEdit, QTableWidget, QTableWidgetItem,
     QCheckBox, QSpinBox, QTimeEdit, QFileDialog, QMessageBox, QComboBox
@@ -427,7 +427,7 @@ class TabOptativas:
         self.editando_optativa_tipo = None
         self.agregar_optativa.setText("Agregar")
 
-        # Vuelve a aplicar paridad (por si alguien cambió ciclo antes)
+        # Vuelve a aplicar paridad
         self._aplicar_paridad_semestres()
 
     def optativa_a_quitada(self):
@@ -488,7 +488,7 @@ class TabOptativas:
         idxc = self.combo_ciclo_escolar.findText(ciclo)
         if idxc >= 0:
             self.combo_ciclo_escolar.setCurrentIndex(idxc)
-        # Ajustar paridad una vez seleccionado
+        # Ajustar paridad
         self._aplicar_paridad_semestres()
 
         # Semestres
