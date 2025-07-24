@@ -20,3 +20,4 @@ MiApp.spec
 !**/maquetador/**/*.ui*.pdf
 *.ttf
 .env
+Interfaz.pdf

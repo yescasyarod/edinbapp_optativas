@@ -22,7 +22,6 @@ class TabOptativas:
         self.editando_optativa_tipo = None
         self.editando_optativa_fila = -1
 
-        # referencias a widgets que usamos después
         self.semestre_checkboxes = []
 
         self._setup_ui()
@@ -60,13 +59,6 @@ class TabOptativas:
         ])
         for col in range(8, 12):
             self.optativas_listado_a.setColumnHidden(col, True)
-        self.optativas_listado_a.setAlternatingRowColors(True)
-        self.optativas_listado_a.setStyleSheet(
-            "background-color: #d9dced; alternate-background-color: #e8eaf4;"
-        )
-        self.optativas_listado_a.horizontalHeader().setStyleSheet(
-            "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
-        )
         la.addWidget(self.optativas_listado_a)
 
         btns_a = QHBoxLayout()
@@ -77,6 +69,16 @@ class TabOptativas:
         la.addLayout(btns_a)
 
         self.tabs.addTab(tab_a, "Optativas A")
+
+        self.optativas_listado_a.setAlternatingRowColors(True)
+        self.optativas_listado_a.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.optativas_listado_a.horizontalHeader().setStretchLastSection(True)
+        self.optativas_listado_a.setStyleSheet(
+            "background-color: #d9dced; alternate-background-color: #e8eaf4;"
+        )
+        self.optativas_listado_a.horizontalHeader().setStyleSheet(
+            "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
+        )
 
         # ====== TAB B ======
         tab_b = QWidget()
@@ -94,13 +96,6 @@ class TabOptativas:
         ])
         for col in range(8, 12):
             self.optativas_listado_b.setColumnHidden(col, True)
-        self.optativas_listado_b.setAlternatingRowColors(True)
-        self.optativas_listado_b.setStyleSheet(
-            "background-color: #d9dced; alternate-background-color: #e8eaf4;"
-        )
-        self.optativas_listado_b.horizontalHeader().setStyleSheet(
-            "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
-        )
         lb.addWidget(self.optativas_listado_b)
 
         btns_b = QHBoxLayout()
@@ -112,13 +107,21 @@ class TabOptativas:
 
         self.tabs.addTab(tab_b, "Optativas B")
 
+        self.optativas_listado_b.setAlternatingRowColors(True)
+        self.optativas_listado_b.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.optativas_listado_b.horizontalHeader().setStretchLastSection(True)
+        self.optativas_listado_b.setStyleSheet(
+            "background-color: #d9dced; alternate-background-color: #e8eaf4;"
+        )
+        self.optativas_listado_b.horizontalHeader().setStyleSheet(
+            "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
+        )
+
         # ----- Panel derecho -----
         derecha = QWidget()
         gd = QGridLayout(derecha)
 
-        # Col izquierda (vertical, col=0)
         row = 0
-
         gd.addWidget(QLabel("Ciclo escolar"), row, 0)
         row += 1
         self.combo_ciclo_escolar = QComboBox()
@@ -141,7 +144,6 @@ class TabOptativas:
             cb = QCheckBox(s)
             self.semestre_checkboxes.append(cb)
             sg.addWidget(cb, i // 4, i % 4)
-        sems_widget.setLayout(sg)
         gd.addWidget(sems_widget, row, 0)
 
         row += 1
@@ -150,7 +152,6 @@ class TabOptativas:
         self.cupo = QSpinBox()
         gd.addWidget(self.cupo, row, 0)
 
-        # Día
         row += 1
         gd.addWidget(QLabel("Día"), row, 0)
         row += 1
@@ -158,7 +159,6 @@ class TabOptativas:
         self.combo_dia.addItems(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"])
         gd.addWidget(self.combo_dia, row, 0)
 
-        # Horario
         row += 1
         gd.addWidget(QLabel("Horario Inicio"), row, 0)
         row += 1
@@ -171,19 +171,26 @@ class TabOptativas:
         self.fecha_final = QTimeEdit(QTime(14, 0))
         gd.addWidget(self.fecha_final, row, 0)
 
-        # Salón
+        # Salón (QComboBox)
         row += 1
         gd.addWidget(QLabel("Salón"), row, 0)
         row += 1
-        self.salones = QLineEdit()
+        self.salones = QComboBox()
+        self.salones.addItems([
+            "102","103","104","109","110","201","202","206","209/lab tintes",
+            "301","304","306","401","402","Artesanías","Auditorio","Biblioteca",
+            "Laboratorio 1","Laboratorio 2","Laboratorio 4","Laboratorio 4 / Salón 103",
+            "Laboratorio de Fotografía","Taller de Cerámica","Taller de Maderas",
+            "Taller de Serigrafía","Taller de Tejido plano","UP1","UP4","UP5",
+            "UP6","UP7","UP8","UP8/Taller de Serigrafía"
+        ])
         gd.addWidget(self.salones, row, 0)
 
-        # Botón agregar/actualizar
         row += 1
         self.agregar_optativa = QPushButton("Agregar")
         gd.addWidget(self.agregar_optativa, row, 0)
 
-        # Bloque Docentes (col=2)
+        # Docentes
         col_doc = 2
         rdoc = 0
         gd.addWidget(QLabel("Buscar docente"), rdoc, col_doc)
@@ -195,16 +202,18 @@ class TabOptativas:
         gd.addWidget(QLabel("Docentes"), rdoc, col_doc)
         rdoc += 1
         self.listado_docentes = QTableWidget()
-        self.listado_docentes.setColumnCount(2)
-        self.listado_docentes.setHorizontalHeaderLabels(["RFC", "Docente"])
-        self.listado_docentes.horizontalHeader().setStretchLastSection(True)
         self.listado_docentes.setAlternatingRowColors(True)
+        self.listado_docentes.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.listado_docentes.horizontalHeader().setStretchLastSection(True)
         self.listado_docentes.setStyleSheet(
-            "background-color: #d9dced; alternate-background-color: #e8eaf4;"
+            "background-color: #d9dced; alternate-background-color: #e8eaf4; color: rgb(12,28,140);"
         )
         self.listado_docentes.horizontalHeader().setStyleSheet(
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
+        self.listado_docentes.setColumnCount(2)
+        self.listado_docentes.setHorizontalHeaderLabels(["RFC", "Docente"])
+        self.listado_docentes.horizontalHeader().setStretchLastSection(True)
         gd.addWidget(self.listado_docentes, rdoc, col_doc, 6, 1)
 
         rdoc += 6
@@ -216,21 +225,23 @@ class TabOptativas:
         self.listado_segundo_docentes.setColumnCount(2)
         self.listado_segundo_docentes.setHorizontalHeaderLabels(["RFC", "Docente"])
         self.listado_segundo_docentes.horizontalHeader().setStretchLastSection(True)
+        self.listado_segundo_docentes.hide()
         self.listado_segundo_docentes.setAlternatingRowColors(True)
+        self.listado_segundo_docentes.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.listado_segundo_docentes.horizontalHeader().setStretchLastSection(True)
         self.listado_segundo_docentes.setStyleSheet(
-            "background-color: #d9dced; alternate-background-color: #e8eaf4;"
+            "background-color: #d9dced; alternate-background-color: #e8eaf4; color: rgb(12,28,140);"
         )
         self.listado_segundo_docentes.horizontalHeader().setStyleSheet(
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
-        self.listado_segundo_docentes.hide()
         gd.addWidget(self.listado_segundo_docentes, rdoc, col_doc, 4, 1)
 
         main_layout.addWidget(derecha, stretch=2)
 
-        # Inicializa visibilidad de semestres según ciclo
         self._aplicar_paridad_semestres()
 
+    # ─────────────────────────── Señales ───────────────────────────
     def _connect_signals(self):
         # CSV
         self.btn_cargar_optativas_a.clicked.connect(self.cargar_optativas_a_csv)
@@ -264,7 +275,6 @@ class TabOptativas:
         ciclo2 = f"{y-1}-{y}/2"
         ciclo1 = f"{y}-{y+1}/1"
         self.combo_ciclo_escolar.addItems([ciclo2, ciclo1])
-        # Por defecto selecciona el que tenga /1 (actual-inicio)
         idx = self.combo_ciclo_escolar.findText(ciclo1)
         if idx >= 0:
             self.combo_ciclo_escolar.setCurrentIndex(idx)
@@ -375,7 +385,7 @@ class TabOptativas:
         dia = self.combo_dia.currentText()
         inicio = self.fecha_inicio.time().toString("HH:mm")
         fin = self.fecha_final.time().toString("HH:mm")
-        salon = self.salones.text().strip()
+        salon = self.salones.currentText().strip()
 
         sem_checked = [cb.text() for cb in self.semestre_checkboxes if cb.isChecked()]
         semestres_str = ", ".join(sem_checked)
@@ -411,7 +421,6 @@ class TabOptativas:
         self.cargar_optativas()
 
     def limpiar_campos_optativas(self):
-        # No cambies el ciclo automáticamente
         self.combo_dia.setCurrentIndex(0)
         self.nombre_optativa.clear()
         for cb in self.semestre_checkboxes:
@@ -419,7 +428,7 @@ class TabOptativas:
         self.cupo.setValue(0)
         self.fecha_inicio.setTime(QTime(12, 0))
         self.fecha_final.setTime(QTime(14, 0))
-        self.salones.clear()
+        self.salones.setCurrentIndex(0)
         self.check_segundo_docente.setChecked(False)
 
         self.editando_optativa = False
@@ -427,7 +436,6 @@ class TabOptativas:
         self.editando_optativa_tipo = None
         self.agregar_optativa.setText("Agregar")
 
-        # Vuelve a aplicar paridad
         self._aplicar_paridad_semestres()
 
     def optativa_a_quitada(self):
@@ -488,7 +496,6 @@ class TabOptativas:
         idxc = self.combo_ciclo_escolar.findText(ciclo)
         if idxc >= 0:
             self.combo_ciclo_escolar.setCurrentIndex(idxc)
-        # Ajustar paridad
         self._aplicar_paridad_semestres()
 
         # Semestres
@@ -508,7 +515,7 @@ class TabOptativas:
             self.fecha_final.setTime(QTime(int(hf[0]), int(hf[1])))
 
         # Salón
-        self.salones.setText(table.item(fila, 7).text())
+        self.salones.setCurrentText(table.item(fila, 7).text())
 
         # Docentes
         rfc1 = table.item(fila, 9).text()
