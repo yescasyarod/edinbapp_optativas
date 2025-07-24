@@ -1,0 +1,9 @@
+Este software usa PySide6/Qt bajo la licencia LGPLv3.
+Puede obtener el código fuente de PySide6 y Qt en:
+  https://code.qt.io/cgit/pyside/pyside-setup.git
+  https://code.qt.io/cgit/qt/qtbase.git
+
+De acuerdo con la LGPLv3, el usuario puede reemplazar las bibliotecas PySide6/Qt por versiones modificadas.
+Estas bibliotecas están enlazadas dinámicamente.
+
+Se incluyen los textos completos de la LGPLv3 y la GPLv3 en los archivos COPYING.LGPLv3 y COPYING.GPLv3.

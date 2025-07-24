@@ -1,0 +1,21 @@
+**/build/
+**/categorias/
+**/dist/
+**/venv/
+**/datos/
+**/listas/
+**/MiApp.app/
+**/__pycache__/
+estudiantes.db
+MiApp
+MiApp.exe
+MiApp.spec
+
+# Ignorar TODO dentro de cualquier carpeta maquetador/
+**/maquetador/**
+
+# …pero permitir la carpeta y los archivos .ui
+!**/maquetador/
+!**/maquetador/*.ui
+!**/maquetador/**/*.ui*.pdf
+*.ttf

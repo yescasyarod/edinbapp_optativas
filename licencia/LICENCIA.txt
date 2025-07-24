@@ -1,0 +1,32 @@
+Copyright (c) 2025, Yarod Yescas. Todos los derechos reservados.
+
+Permiso especial de uso
+-----------------------
+La institución “Escuela de Diseño” (“la Escuela”) puede:
+  • Usar, instalar y ejecutar este software sin costo.
+  • Modificarlo internamente para sus necesidades.
+  • Distribuirlo internamente dentro de la Escuela.
+
+Restricciones para terceros
+---------------------------
+Cualquier otra persona u organización NO puede usar, copiar, modificar ni distribuir
+este software sin autorización escrita del titular.
+
+Contribuciones
+--------------
+Al enviar propuestas de cambio (pull requests) o cualquier contribución de código, el colaborador declara que:
+  (a) Tiene derecho a contribuir dicho código.
+  (b) Otorga al titular del proyecto (Yarod Yescas) una licencia perpetua, irrevocable, mundial y libre de regalías
+      para usar, modificar, sublicenciar y redistribuir su contribución bajo los términos de esta licencia propietaria.
+
+Bibliotecas de terceros
+-----------------------
+Este software utiliza PySide6/Qt, licenciadas bajo la LGPLv3. Se incluyen (o se distribuirán junto al binario) los textos completos
+de la LGPLv3 y la GPLv3 en los archivos COPYING.LGPLv3 y COPYING.GPLv3. El usuario puede reemplazar dichas bibliotecas conforme a la LGPL.
+
+No se otorgan otras licencias ni derechos implícitos. Cualquier uso no contemplado aquí requiere permiso escrito del titular.
+
+Jurisdicción y ley aplicable
+----------------------------
+Este acuerdo se regirá por las leyes de ________________________. Cualquier disputa se someterá a los tribunales
+competentes de ________________________.
