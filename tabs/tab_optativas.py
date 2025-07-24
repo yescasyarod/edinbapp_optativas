@@ -3,7 +3,7 @@
 import csv
 from datetime import datetime
 
-from PySide6.QtCore import Qt, QTime
+from PySide6.QtCore import Qt, QTime, Signal, QObject
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QTabWidget, QGridLayout,
     QPushButton, QLabel, QLineEdit, QTableWidget, QTableWidgetItem,
@@ -12,8 +12,10 @@ from PySide6.QtWidgets import (
 from utils import obtener_ruta
 
 
-class TabOptativas:
+class TabOptativas(QObject):
+    optativas_changed = Signal()
     def __init__(self, db, is_admin=True):
+        super().__init__() 
         self.db = db
         self.is_admin = is_admin
 
@@ -463,6 +465,7 @@ class TabOptativas:
 
         self.limpiar_campos_optativas()
         self.cargar_optativas()
+        self.optativas_changed.emit()
 
     def limpiar_campos_optativas(self):
         self.combo_dia.setCurrentIndex(0)
@@ -496,6 +499,7 @@ class TabOptativas:
         if reply == QMessageBox.StandardButton.Yes:
             self.db.run_query("DELETE FROM optativas WHERE id=?", (opt_id,))
             self.optativas_listado_a.removeRow(fila)
+            self.optativas_changed.emit()
 
     def optativa_b_quitada(self):
         fila = self.optativas_listado_b.currentRow()
@@ -510,6 +514,7 @@ class TabOptativas:
         if reply == QMessageBox.StandardButton.Yes:
             self.db.run_query("DELETE FROM optativas WHERE id=?", (opt_id,))
             self.optativas_listado_b.removeRow(fila)
+            self.optativas_changed.emit()
 
     def edit_optativa_a(self):
         fila = self.optativas_listado_a.currentRow()
@@ -602,6 +607,7 @@ class TabOptativas:
         self.db.run_query("DELETE FROM optativas WHERE tipo='A'")
         self._leer_csv_e_insertar(fn)
         self.cargar_optativas()
+        self.optativas_changed.emit()
 
     def cargar_optativas_b_csv(self):
         fn, _ = QFileDialog.getOpenFileName(
@@ -613,6 +619,7 @@ class TabOptativas:
         self.db.run_query("DELETE FROM optativas WHERE tipo='B'")
         self._leer_csv_e_insertar(fn)
         self.cargar_optativas()
+        self.optativas_changed.emit()
 
     def _leer_csv_e_insertar(self, fn):
         with open(fn, newline="", encoding="utf-8-sig") as f:

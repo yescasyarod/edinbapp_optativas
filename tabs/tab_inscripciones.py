@@ -1,6 +1,6 @@
 # proyecto/tabs/tab_inscripciones.py
 
-from PySide6.QtCore import Qt, QTime
+from PySide6.QtCore import Qt, QTime, QEvent
 from PySide6.QtWidgets import (
     QWidget, QGridLayout, QComboBox, QLineEdit, QLabel,
     QTableWidget, QPushButton, QCheckBox, QHeaderView,
@@ -27,7 +27,8 @@ class TabInscripciones:
 
         # Controles de filtro
         self.combo_inscritos_tab3 = QComboBox()
-        self.combo_inscritos_tab3.addItems(["No inscritos", "Inscritos"])
+        # ahora incluye "Parcial" para los que tienen solo A o solo B
+        self.combo_inscritos_tab3.addItems(["No inscritos", "Parcial", "Inscritos"])
         grid.addWidget(self.combo_inscritos_tab3, 0, 0)
 
         self.combo_semestre_tab3 = QComboBox()
@@ -50,7 +51,7 @@ class TabInscripciones:
         hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
         hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         self.table_estudiantes_tab3.setStyleSheet(
             "background-color: #d9dced; alternate-background-color: #e8eaf4;"
         )
@@ -177,10 +178,19 @@ class TabInscripciones:
             llevaA = ("A" in tipos) or yaA
             llevaB = ("B" in tipos) or yaB
 
-            if modo == "Inscritos" and not (llevaA and llevaB):
-                continue
-            if modo == "No inscritos" and (llevaA and llevaB):
-                continue
+            # filtrar según el modo seleccionado
+            if modo == "Inscritos":
+                # sólo los que tienen A **y** B
+                if not (llevaA and llevaB):
+                    continue
+            elif modo == "No inscritos":
+                # sólo los que no tienen ni A ni B
+                if (llevaA or llevaB):
+                    continue
+            elif modo == "Parcial":
+                # sólo los que tienen exactamente una de las dos
+                if not ((llevaA and not llevaB) or (llevaB and not llevaA)):
+                    continue
 
             self.table_estudiantes_tab3.insertRow(row_idx)
             self.table_estudiantes_tab3.setItem(row_idx, 0, QTableWidgetItem(mat))
@@ -310,7 +320,26 @@ class TabInscripciones:
         row = self.table_estudiantes_tab3.currentRow()
         if row < 0:
             return
+
+        matricula  = self.table_estudiantes_tab3.item(row, 0).text()
         sem_alumno = self.table_estudiantes_tab3.item(row, 2).text()
+
+        # Inscripciones B actuales (tipo 'B')
+        insB = self.db.run_query(
+            "SELECT o.dia, o.inicio, o.fin FROM inscripciones i "
+            "JOIN optativas o ON i.optativa_id=o.id "
+            "WHERE i.matricula=? AND o.tipo='B'",
+            (matricula,), fetch="all"
+        )
+        # Inscripciones A actuales (tipo 'A')
+        insA_cur = self.db.run_query(
+            "SELECT o.dia, o.inicio, o.fin FROM inscripciones i "
+            "JOIN optativas o ON i.optativa_id=o.id "
+            "WHERE i.matricula=? AND o.tipo='A'",
+            (matricula,), fetch="all"
+        )
+
+        # Todas las optativas A
         res = self.db.run_query(
             """SELECT o.id, o.nombre,
                       d1.nombre, d1.apellido_paterno, d1.apellido_materno,
@@ -323,16 +352,41 @@ class TabInscripciones:
                ORDER BY o.nombre""",
             fetch="all"
         )
+
         filas = []
-        for (opt_id, nombre, d1n, d1p, d1m, d2n, d2p, d2m, sems, cupo, dia, hi, hf, sal) in res:
+        for (opt_id, nombre, d1n, d1p, d1m, d2n, d2p, d2m,
+             sems, cupo, dia, hi, hf, sal) in res:
+
+            # 1) semestre
             if sem_alumno not in (sems or ""):
                 continue
+
+            # 2) cupo
             count = self.db.run_query(
                 "SELECT COUNT(*) FROM inscripciones WHERE optativa_id=?", (opt_id,), fetch="one"
             )[0]
-            if count < cupo:
-                docente = f"{d1n} {d1p} {d1m}" + (f" & {d2n} {d2p} {d2m}" if d2n else "")
-                filas.append((opt_id, nombre, docente, sems, cupo, count, dia, hi, hf, sal))
+            if count >= cupo:
+                continue
+
+            # 3) solapamiento con B
+            dia_norm = dia.strip().lower()
+            if any(d2.strip().lower() == dia_norm and self.times_overlap(hi, hf, hi2, hf2)
+                   for d2, hi2, hf2 in insB):
+                continue
+
+            # 4) solapamiento con otras A ya inscritas
+            if any(d2.strip().lower() == dia_norm and self.times_overlap(hi, hf, hi2, hf2)
+                   for d2, hi2, hf2 in insA_cur):
+                continue
+
+            # construir cadena de docentes
+            docente = f"{d1n} {d1p} {d1m}"
+            if d2n:
+                docente += f" & {d2n} {d2p} {d2m}"
+
+            filas.append((opt_id, nombre, docente, sems, cupo, count, dia, hi, hf, sal))
+
+        # poblar tabla A
         for i, (_, nombre, docente, sems, cupo, count, dia, hi, hf, sal) in enumerate(filas):
             disp = cupo - count
             self.optativas_listado_a_tab3.insertRow(i)
@@ -345,12 +399,32 @@ class TabInscripciones:
             self.optativas_listado_a_tab3.setItem(i, 6, QTableWidgetItem(hf))
             self.optativas_listado_a_tab3.setItem(i, 7, QTableWidgetItem(sal))
 
+
     def cargar_optativas_b_tab3(self):
         self.optativas_listado_b_tab3.setRowCount(0)
         row = self.table_estudiantes_tab3.currentRow()
         if row < 0:
             return
+
+        matricula  = self.table_estudiantes_tab3.item(row, 0).text()
         sem_alumno = self.table_estudiantes_tab3.item(row, 2).text()
+
+        # Inscripciones A actuales (tipo 'A')
+        insA = self.db.run_query(
+            "SELECT o.dia, o.inicio, o.fin FROM inscripciones i "
+            "JOIN optativas o ON i.optativa_id=o.id "
+            "WHERE i.matricula=? AND o.tipo='A'",
+            (matricula,), fetch="all"
+        )
+        # Inscripciones B actuales (tipo 'B')
+        insB_cur = self.db.run_query(
+            "SELECT o.dia, o.inicio, o.fin FROM inscripciones i "
+            "JOIN optativas o ON i.optativa_id=o.id "
+            "WHERE i.matricula=? AND o.tipo='B'",
+            (matricula,), fetch="all"
+        )
+
+        # Todas las optativas B
         res = self.db.run_query(
             """SELECT o.id, o.nombre,
                       d1.nombre, d1.apellido_paterno, d1.apellido_materno,
@@ -363,16 +437,41 @@ class TabInscripciones:
                ORDER BY o.nombre""",
             fetch="all"
         )
+
         filas = []
-        for (opt_id, nombre, d1n, d1p, d1m, d2n, d2p, d2m, sems, cupo, dia, hi, hf, sal) in res:
+        for (opt_id, nombre, d1n, d1p, d1m, d2n, d2p, d2m,
+             sems, cupo, dia, hi, hf, sal) in res:
+
+            # 1) semestre
             if sem_alumno not in (sems or ""):
                 continue
+
+            # 2) cupo
             count = self.db.run_query(
                 "SELECT COUNT(*) FROM inscripciones WHERE optativa_id=?", (opt_id,), fetch="one"
             )[0]
-            if count < cupo:
-                docente = f"{d1n} {d1p} {d1m}" + (f" & {d2n} {d2p} {d2m}" if d2n else "")
-                filas.append((opt_id, nombre, docente, sems, cupo, count, dia, hi, hf, sal))
+            if count >= cupo:
+                continue
+
+            # 3) solapamiento con A
+            dia_norm = dia.strip().lower()
+            if any(d2.strip().lower() == dia_norm and self.times_overlap(hi, hf, hi2, hf2)
+                   for d2, hi2, hf2 in insA):
+                continue
+
+            # 4) solapamiento con otras B ya inscritas
+            if any(d2.strip().lower() == dia_norm and self.times_overlap(hi, hf, hi2, hf2)
+                   for d2, hi2, hf2 in insB_cur):
+                continue
+
+            # construir cadena de docentes
+            docente = f"{d1n} {d1p} {d1m}"
+            if d2n:
+                docente += f" & {d2n} {d2p} {d2m}"
+
+            filas.append((opt_id, nombre, docente, sems, cupo, count, dia, hi, hf, sal))
+
+        # poblar tabla B
         for i, (_, nombre, docente, sems, cupo, count, dia, hi, hf, sal) in enumerate(filas):
             disp = cupo - count
             self.optativas_listado_b_tab3.insertRow(i)
@@ -390,12 +489,14 @@ class TabInscripciones:
         opt = self.optativas_listado_a_tab3.currentRow()
         if est < 0 or opt < 0:
             return
+
         mat = self.table_estudiantes_tab3.item(est, 0).text()
         nombre = self.optativas_listado_a_tab3.item(opt, 0).text()
         dia = self.optativas_listado_a_tab3.item(opt, 4).text()
         hi = self.optativas_listado_a_tab3.item(opt, 5).text()
         hf = self.optativas_listado_a_tab3.item(opt, 6).text()
 
+        # obtener id y cupo
         res = self.db.run_query(
             "SELECT id, cupo FROM optativas WHERE tipo='A' AND nombre=? AND dia=? AND inicio=? AND fin=?",
             (nombre, dia, hi, hf),
@@ -411,7 +512,7 @@ class TabInscripciones:
             QMessageBox.warning(self.widget, "Advertencia", f"La optativa '{nombre}' ya alcanzó su cupo.")
             return
 
-        # comprobar solapamiento con B
+        # solapamiento con B
         others = self.db.run_query(
             "SELECT o.dia, o.inicio, o.fin, o.nombre FROM inscripciones i "
             "JOIN optativas o ON i.optativa_id=o.id "
@@ -419,13 +520,17 @@ class TabInscripciones:
             (mat,), fetch="all"
         )
         for d2, hi2, hf2, n2 in others:
-            if d2 == dia and self.times_overlap(hi, hf, hi2, hf2):
+            if d2.strip().lower() == dia.strip().lower() and self.times_overlap(hi, hf, hi2, hf2):
                 QMessageBox.warning(self.widget, "Advertencia", f"Se superpone con '{n2}'.")
                 return
 
+        # insertar
         self.db.run_query("INSERT INTO inscripciones(matricula, optativa_id) VALUES(?, ?)", (mat, oid))
+
+        # 🚀 recargas inmediatas
         self._reload_inscritas_tab3()
         self.cargar_optativas_a_tab3()
+        self.cargar_optativas_b_tab3()           # <— añadida
         self._control_optativas_a_b_habilitadas()
 
     def inscribir_optativa_b(self):
@@ -433,12 +538,14 @@ class TabInscripciones:
         opt = self.optativas_listado_b_tab3.currentRow()
         if est < 0 or opt < 0:
             return
+
         mat = self.table_estudiantes_tab3.item(est, 0).text()
         nombre = self.optativas_listado_b_tab3.item(opt, 0).text()
         dia = self.optativas_listado_b_tab3.item(opt, 4).text()
         hi = self.optativas_listado_b_tab3.item(opt, 5).text()
         hf = self.optativas_listado_b_tab3.item(opt, 6).text()
 
+        # obtener id y cupo
         res = self.db.run_query(
             "SELECT id, cupo FROM optativas WHERE tipo='B' AND nombre=? AND dia=? AND inicio=? AND fin=?",
             (nombre, dia, hi, hf),
@@ -454,7 +561,7 @@ class TabInscripciones:
             QMessageBox.warning(self.widget, "Advertencia", f"La optativa '{nombre}' ya alcanzó su cupo.")
             return
 
-        # comprobar solapamiento con A
+        # solapamiento con A
         others = self.db.run_query(
             "SELECT o.dia, o.inicio, o.fin, o.nombre FROM inscripciones i "
             "JOIN optativas o ON i.optativa_id=o.id "
@@ -462,13 +569,17 @@ class TabInscripciones:
             (mat,), fetch="all"
         )
         for d2, hi2, hf2, n2 in others:
-            if d2 == dia and self.times_overlap(hi, hf, hi2, hf2):
+            if d2.strip().lower() == dia.strip().lower() and self.times_overlap(hi, hf, hi2, hf2):
                 QMessageBox.warning(self.widget, "Advertencia", f"Se superpone con '{n2}'.")
                 return
 
+        # insertar
         self.db.run_query("INSERT INTO inscripciones(matricula, optativa_id) VALUES(?, ?)", (mat, oid))
+
+        # 🚀 recargas inmediatas
         self._reload_inscritas_tab3()
         self.cargar_optativas_b_tab3()
+        self.cargar_optativas_a_tab3()           # <— añadida
         self._control_optativas_a_b_habilitadas()
 
     def quitar_inscrita(self):

@@ -24,6 +24,7 @@ from tabs.tab_docentes import TabDocentes
 from tabs.tab_optativas import TabOptativas
 from tabs.tab_inscripciones import TabInscripciones
 from tabs.tab_listas import TabListas
+from tabs.tab_estadisticas import TabEstadisticas
 
 
 class LoginDialog(QDialog):
@@ -171,9 +172,17 @@ class MainWindow(QMainWindow):
 
         self.tab_ins = TabInscripciones(self.db)
         self.tabWidget.addTab(self.tab_ins.widget, "INSCRIPCIONES")
+        # Cuando cambien las optativas, recarga al instante las listas A y B en Inscripciones
+        self.tab_opt.optativas_changed.connect(self.tab_ins.cargar_optativas_a_tab3)
+        self.tab_opt.optativas_changed.connect(self.tab_ins.cargar_optativas_b_tab3)
+
 
         self.tab_lis = TabListas(self.db, self.settings)
         self.tabWidget.addTab(self.tab_lis.widget, "LISTAS")
+
+        # Estadísticas de inscripciones
+        self.tab_estad = TabEstadisticas(self.db)
+        self.tabWidget.addTab(self.tab_estad.widget, "ESTADÍSTICAS")
 
         # Carga inicial de datos
         self.tab_est.cargar_estudiantes()

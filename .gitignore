@@ -21,3 +21,4 @@ MiApp.spec
 *.ttf
 .env
 Interfaz.pdf
+.DS_Store
