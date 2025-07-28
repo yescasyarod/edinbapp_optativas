@@ -7,10 +7,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import csv
 from PySide6.QtCore import Qt, QRegularExpression
-from PySide6.QtGui import QFont, QRegularExpressionValidator
+from PySide6.QtGui import QFont, QRegularExpressionValidator, QPalette, QColor
 from PySide6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QComboBox, QPushButton,
-    QTableWidget, QTableWidgetItem, QMessageBox, QFileDialog
+    QTableWidget, QTableWidgetItem, QMessageBox, QFileDialog, QAbstractItemView
 )
 from utils import obtener_ruta
 
@@ -71,6 +71,16 @@ class TabEstudiantes:
 
         # Tabla estudiantes
         self.table_estudiantes = QTableWidget(self._tab)
+        # que seleccione filas completas y sólo una a la vez
+        self.table_estudiantes.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table_estudiantes.setSelectionMode(QAbstractItemView.SingleSelection)
+
+        # evitar que la tabla borre la selección al perder foco o al hacer clic en un área vacía
+        #self.table_estudiantes.setAutoClearSelection(False)
+        pal = self.table_estudiantes.palette()
+        pal.setColor(QPalette.Highlight, QColor("white"))             # fondo de la selección
+        pal.setColor(QPalette.HighlightedText, QColor(12, 28, 140))   # texto de la selección
+        self.table_estudiantes.setPalette(pal)
         self.table_estudiantes.setGeometry(40, 90, 1281, 361)
         self.table_estudiantes.setColumnCount(4)
         self.table_estudiantes.setHorizontalHeaderLabels(
@@ -80,9 +90,24 @@ class TabEstudiantes:
         self.table_estudiantes.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table_estudiantes.horizontalHeader().setStretchLastSection(True)
         self.table_estudiantes.setColumnWidth(1, 400)
-        self.table_estudiantes.setStyleSheet(
-            "background-color: #d9dced; alternate-background-color: #e8eaf4;"
-        )
+        self.table_estudiantes.setStyleSheet("""
+            QTableWidget {
+                background-color: #d9dced;
+                alternate-background-color: #e8eaf4;
+            }
+            /* Resalta siempre en blanco, tanto con foco como sin foco */
+            QTableWidget::item:selected,
+            QTableWidget::item:selected:active,
+            QTableWidget::item:selected:!active {
+                background-color: white;
+                color: rgb(12, 28, 140);
+            }
+            QHeaderView::section {
+                background-color: #bfc4e0;
+                font-weight: bold;
+                color: #0c1c8c;
+            }
+        """)
         self.table_estudiantes.horizontalHeader().setStyleSheet(
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
