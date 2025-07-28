@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 # ── Qt ──────────────────────────────────────────────────────────
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
-    QTabWidget, QMessageBox, QDialog, QLineEdit, QPushButton
+    QTabWidget, QMessageBox, QDialog, QLineEdit, QPushButton,
+    QLabel
 )
 from PySide6.QtGui import QIcon, QAction, QFontDatabase, QFont
 from PySide6.QtCore import QSettings, Qt
@@ -198,18 +199,43 @@ class MainWindow(QMainWindow):
         self.menuBar().addAction(action_creditos)
 
     def mostrar_creditos(self):
-        QMessageBox.information(
-            self,
-            "Créditos y Licencia",
-            "Desarrollador: Yarod Yescas Cupich\n"
-            "Diseñadora de la Interfaz: Karen\n"
-            "Asesor del proyecto: David Perrusquía González\n\n"
-            "Esta aplicación utiliza la biblioteca Qt a través de PySide6.\n"
-            "Qt está licenciada bajo LGPLv3.\n"
-            "Las bibliotecas Qt usadas están enlazadas dinámicamente y pueden ser reemplazadas.\n"
-            "Puede consultar los términos completos de la licencia en:\n"
-            "https://www.gnu.org/licenses/lgpl-3.0.html"
+        # 1) Creamos el QMessageBox
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Créditos y Licencia")
+        msg.setIcon(QMessageBox.NoIcon)
+        
+        # 2) Le decimos que el texto es HTML
+        msg.setTextFormat(Qt.RichText)
+        
+        # 3) Permitimos interacción con el texto (clic en links)
+        msg.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        
+        # 4) Definimos el HTML con los <a href="...">
+        html = (
+            'Desarrollador: '
+            '<a href="https://www.instagram.com/yarod.yescas.cupich/" '
+            'style="text-decoration:none; color:#0000ff;">'
+            'Yarod Yescas Cupich</a><br>'
+            'Diseñadora de la Interfaz: Karen<br>'
+            'Asesor del proyecto: David Perrusquía González<br><br>'
+            'Esta aplicación utiliza la biblioteca Qt a través de PySide6.<br>'
+            'Qt está licenciada bajo LGPLv3.<br>'
+            'Las bibliotecas Qt usadas están enlazadas dinámicamente y pueden ser reemplazadas.<br>'
+            'Consulte los términos completos en:<br>'
+            '<a href="https://www.gnu.org/licenses/lgpl-3.0.html">'
+            'https://www.gnu.org/licenses/lgpl-3.0.html</a>'
         )
+        msg.setText(html)
+        
+        # 5) Para que el link realmente abra el navegador,
+        #    tenemos que activar openExternalLinks en la etiqueta interna
+        label = msg.findChild(QLabel)
+        if label:
+            label.setOpenExternalLinks(True)
+        
+        # 6) Botón OK y mostrar
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec()
 
     def create_tables(self):
         queries = [
@@ -289,15 +315,27 @@ if __name__ == "__main__":
     noto_family = load_font("fuentes/NotoSans-VariableFont.ttf")
     if noto_family:
         app.setFont(QFont(noto_family, 12))
-    else:
-        print("[INFO] Usando la fuente del sistema porque no se pudo registrar Noto Sans.")
 
-    # 🔽 Forzar texto negro en tablas
     app.setStyleSheet("""
         QTableWidget, QTableWidget QTableView, QTableWidget::item {
             color: black;
         }
     """)
+
+    # ─────────────────────────────────────────────────────────────
+    #  ¿SALTAR LOGIN? Pon SKIP_LOGIN=true en tu .env si quieres
+    # ─────────────────────────────────────────────────────────────
+    skip_login = os.getenv("SKIP_LOGIN", "false").lower() == "true"
+    default_role = os.getenv("DEFAULT_ROLE", "admin")  # o "optativas"
+
+    if skip_login:
+        # Directamente al programa, sin pedir credenciales
+        ruta_bd = obtener_ruta_bd()
+        db = Database(ruta_bd)
+        settings = QSettings("EDINBA", "EstudiantesDocentesOptativas")
+        w = MainWindow(db, settings, default_role)
+        w.show()
+        sys.exit(app.exec())
 
     # ─────────────────────────────────────────────────────────────
     #  Login y arranque normal

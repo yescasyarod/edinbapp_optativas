@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QPushButton, QLabel, QLineEdit, QTableWidget, QTableWidgetItem,
     QCheckBox, QSpinBox, QTimeEdit, QFileDialog, QMessageBox, QComboBox
 )
+from PySide6.QtGui import QFont
 from utils import obtener_ruta
 
 
@@ -38,43 +39,46 @@ class TabOptativas(QObject):
 
     # ─────────────────────────── UI ───────────────────────────
     def _setup_ui(self):
+        # Contenedor único
         self.widget = QWidget()
-        main_layout = QHBoxLayout(self.widget)
+        self.widget.setGeometry(0, 0, 1366, 768)
 
-        # ----- Tabs A/B -----
-        self.tabs = QTabWidget()
-        main_layout.addWidget(self.tabs, stretch=4)
+        # ——— Tabs A/B ———
+        self.tabs = QTabWidget(self.widget)
+        self.tabs.setGeometry(10, 10, 1360, 760)
 
         # ====== TAB A ======
-        tab_a = QWidget()
-        la = QVBoxLayout(tab_a)
+        tab_a = QWidget(self.tabs)
+        self.tabs.addTab(tab_a, "Optativas A")
 
-        self.btn_cargar_optativas_a = QPushButton("Cargar Optativas A (csv)")
-        la.addWidget(self.btn_cargar_optativas_a)
-        self.buscar_optativa_a = QLineEdit()
-        self.buscar_optativa_a.setPlaceholderText("Buscar optativa…")
-        la.addWidget(self.buscar_optativa_a)
-        la.addWidget(QLabel("Optativas A", alignment=Qt.AlignmentFlag.AlignCenter))
+        # Botón Cargar A
+        self.btn_cargar_optativas_a = QPushButton("Cargar Optativas A (csv)", tab_a)
+        self.btn_cargar_optativas_a.setGeometry(575, 360, 200, 30)
 
-        self.optativas_listado_a = QTableWidget()
+        # Buscar A
+        self.buscar_optativa_a = QLineEdit(tab_a)
+        self.buscar_optativa_a.setPlaceholderText("BUSCAR OPTATIVA A")
+        self.buscar_optativa_a.setGeometry(470, 10, 300, 30)
+
+        # Título A
+        lbl_a = QLabel("Optativas A", tab_a)
+        lbl_a.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        lbl_a.setGeometry(20, 10, 260, 30)
+        lbl_a.setFont(QFont("Noto Sans", 20, QFont.Weight.Bold))
+        lbl_a.setStyleSheet("color: rgb(12, 28, 140);")
+
+        # Tabla A
+        self.optativas_listado_a = QTableWidget(tab_a)
+        self.optativas_listado_a.setGeometry(10, 50, 760, 300)
         self.optativas_listado_a.setColumnCount(12)
         self.optativas_listado_a.setHorizontalHeaderLabels([
-            "Optativa", "Docente", "Semestres", "Cupo", "Día", "Inicio", "Fin", "Salón",
-            "ID (oculto)", "RFC Docente (oculto)", "RFC Segundo Docente (oculto)", "Ciclo (oculto)"
+            "Optativa", "Docente", "Semestres", "Cupo",
+            "Día", "Inicio", "Fin", "Salón",
+            "ID (oculto)", "RFC Docente (oculto)",
+            "RFC Segundo Docente (oculto)", "Ciclo (oculto)"
         ])
         for col in range(8, 12):
             self.optativas_listado_a.setColumnHidden(col, True)
-        la.addWidget(self.optativas_listado_a)
-
-        btns_a = QHBoxLayout()
-        self.editar_optativa_a = QPushButton("Editar A")
-        self.quitar_optativa_a = QPushButton("Quitar A")
-        btns_a.addWidget(self.editar_optativa_a)
-        btns_a.addWidget(self.quitar_optativa_a)
-        la.addLayout(btns_a)
-
-        self.tabs.addTab(tab_a, "Optativas A")
-
         self.optativas_listado_a.setAlternatingRowColors(True)
         self.optativas_listado_a.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.optativas_listado_a.horizontalHeader().setStretchLastSection(True)
@@ -85,40 +89,40 @@ class TabOptativas(QObject):
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
 
+        # Editar/Quitar A
+        self.editar_optativa_a = QPushButton("Editar A", tab_a)
+        self.editar_optativa_a.setGeometry(10, 360, 100, 30)
+        self.quitar_optativa_a = QPushButton("Quitar A", tab_a)
+        self.quitar_optativa_a.setGeometry(120, 360, 100, 30)
+
         # ====== TAB B ======
-        tab_b = QWidget()
-        lb = QVBoxLayout(tab_b)
+        tab_b = QWidget(self.tabs)
+        self.tabs.addTab(tab_b, "Optativas B")
 
-        self.btn_cargar_optativas_b = QPushButton("Cargar Optativas B (csv)")
-        lb.addWidget(self.btn_cargar_optativas_b)
-        self.buscar_optativa_b = QLineEdit()
-        self.buscar_optativa_b.setPlaceholderText("Buscar optativa…")
-        lb.addWidget(self.buscar_optativa_b)
-        lb.addWidget(QLabel("Optativas B", alignment=Qt.AlignmentFlag.AlignCenter))
+        self.btn_cargar_optativas_b = QPushButton("Cargar Optativas B (csv)", tab_b)
+        self.btn_cargar_optativas_b.setGeometry(575, 360, 200, 30)
 
-        self.optativas_listado_b = QTableWidget()
+        self.buscar_optativa_b = QLineEdit(tab_b)
+        self.buscar_optativa_b.setPlaceholderText("BUSCAR OPTATIVA B")
+        self.buscar_optativa_b.setGeometry(470, 10, 300, 30)
+
+        lbl_b = QLabel("Optativas B", tab_b)
+        lbl_b.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        lbl_b.setGeometry(20, 10, 260, 30)
+        lbl_b.setFont(QFont("Noto Sans", 20, QFont.Weight.Bold))
+        lbl_b.setStyleSheet("color: rgb(12, 28, 140);")
+
+        self.optativas_listado_b = QTableWidget(tab_b)
+        self.optativas_listado_b.setGeometry(10, 50, 760, 300)
         self.optativas_listado_b.setColumnCount(12)
         self.optativas_listado_b.setHorizontalHeaderLabels([
-            "Optativa", "Docente", "Semestres", "Cupo", "Día", "Inicio", "Fin", "Salón",
-            "ID (oculto)", "RFC Docente (oculto)", "RFC Segundo Docente (oculto)", "Ciclo (oculto)"
+            "Optativa", "Docente", "Semestres", "Cupo",
+            "Día", "Inicio", "Fin", "Salón",
+            "ID (oculto)", "RFC Docente (oculto)",
+            "RFC Segundo Docente (oculto)", "Ciclo (oculto)"
         ])
         for col in range(8, 12):
             self.optativas_listado_b.setColumnHidden(col, True)
-        lb.addWidget(self.optativas_listado_b)
-
-        btns_b = QHBoxLayout()
-        self.editar_optativa_b = QPushButton("Editar B")
-        self.quitar_optativa_b = QPushButton("Quitar B")
-        btns_b.addWidget(self.editar_optativa_b)
-        btns_b.addWidget(self.quitar_optativa_b)
-        lb.addLayout(btns_b)
-
-        self.tabs.addTab(tab_b, "Optativas B")
-
-        if not self.is_admin:
-            self.quitar_optativa_a.hide()
-            self.quitar_optativa_b.hide()
-
         self.optativas_listado_b.setAlternatingRowColors(True)
         self.optativas_listado_b.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.optativas_listado_b.horizontalHeader().setStretchLastSection(True)
@@ -129,91 +133,95 @@ class TabOptativas(QObject):
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
 
-        # ----- Panel derecho -----
-        derecha = QWidget()
-        gd = QGridLayout(derecha)
+        self.editar_optativa_b = QPushButton("Editar B", tab_b)
+        self.editar_optativa_b.setGeometry(10, 360, 100, 30)
+        self.quitar_optativa_b = QPushButton("Quitar B", tab_b)
+        self.quitar_optativa_b.setGeometry(120, 360, 100, 30)
 
-        row = 0
-        gd.addWidget(QLabel("Ciclo escolar"), row, 0)
-        row += 1
-        self.combo_ciclo_escolar = QComboBox()
+        # ——— Panel derecho (mismo padre) ———
+        x0 = 800
+        y = 10
+
+        lbl_ciclo = QLabel("Ciclo escolar", self.widget)
+        lbl_ciclo.setGeometry(35, 580, 120, 20)
+        self.combo_ciclo_escolar = QComboBox(self.widget)
         self._populate_ciclos()
-        gd.addWidget(self.combo_ciclo_escolar, row, 0)
+        self.combo_ciclo_escolar.setGeometry(30, 600, 150, 30)
 
-        row += 1
-        gd.addWidget(QLabel("Optativa"), row, 0)
-        row += 1
-        self.nombre_optativa = QLineEdit()
-        gd.addWidget(self.nombre_optativa, row, 0)
+        y += 80
+        lbl_nom = QLabel("AGREGAR OPTATIVA", self.widget)
+        lbl_nom.setGeometry(35, 480, 180, 20)
+        lbl_nom.setFont(QFont("Noto Sans", 12, QFont.Weight.Bold))
+        lbl_nom.setStyleSheet("color: rgb(12,28,140);")
+        self.nombre_optativa = QLineEdit(self.widget)
+        self.nombre_optativa.setGeometry(30, 510, 250, 30)
+        self.nombre_optativa.setPlaceholderText("NOMBRE DE LA OPTATIVA")
 
-        row += 1
-        gd.addWidget(QLabel("Semestres"), row, 0)
-        row += 1
-        sems_widget = QWidget()
-        sg = QGridLayout(sems_widget)
-        semestres = ["1°", "2°", "3°", "4°", "5°", "6°", "7°"]
-        for i, s in enumerate(semestres):
-            cb = QCheckBox(s)
+        y += 80
+        lbl_sems = QLabel("Semestres", self.widget)
+        lbl_sems.setGeometry(330, 480, 100, 20)
+        sems = ["1°","2°","3°","4°","5°","6°","7°"]
+        for i, s in enumerate(sems):
+            cb = QCheckBox(s, self.widget)
             self.semestre_checkboxes.append(cb)
-            sg.addWidget(cb, i // 4, i % 4)
-        gd.addWidget(sems_widget, row, 0)
+            cb.setGeometry(330 + (i % 4) * 20, 480 + 25 + (i // 4) * 30, 50, 25)
 
-        row += 1
-        gd.addWidget(QLabel("Cupo"), row, 0)
-        row += 1
-        self.cupo = QSpinBox()
-        gd.addWidget(self.cupo, row, 0)
+        y += 120
+        lbl_cupo = QLabel("Cupo", self.widget)
+        lbl_cupo.setGeometry(330, 580, 50, 20)
+        self.cupo = QSpinBox(self.widget)
+        self.cupo.setGeometry(330, 600, 80, 30)
 
-        row += 1
-        gd.addWidget(QLabel("Día"), row, 0)
-        row += 1
-        self.combo_dia = QComboBox()
-        self.combo_dia.addItems(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"])
-        gd.addWidget(self.combo_dia, row, 0)
+        y += 80
+        lbl_dia = QLabel("Día", self.widget)
+        lbl_dia.setGeometry(470, 480, 40, 20)
+        self.combo_dia = QComboBox(self.widget)
+        self.combo_dia.addItems(["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"])
+        self.combo_dia.setGeometry(470, 500, 130, 30)
 
-        row += 1
-        gd.addWidget(QLabel("Horario Inicio"), row, 0)
-        row += 1
-        self.fecha_inicio = QTimeEdit(QTime(12, 0))
-        gd.addWidget(self.fecha_inicio, row, 0)
+        y += 80
+        lbl_ini = QLabel("Horario Inicio", self.widget)
+        lbl_ini.setGeometry(640, 480, 100, 20)
+        self.fecha_inicio = QTimeEdit(QTime(12,0), self.widget)
+        self.fecha_inicio.setGeometry(640, 500, 100, 30)
 
-        row += 1
-        gd.addWidget(QLabel("Horario Fin"), row, 0)
-        row += 1
-        self.fecha_final = QTimeEdit(QTime(14, 0))
-        gd.addWidget(self.fecha_final, row, 0)
+        y += 80
+        lbl_fin = QLabel("Horario Fin", self.widget)
+        lbl_fin.setGeometry(680, 580, 100, 20)
+        self.fecha_final = QTimeEdit(QTime(14,0), self.widget)
+        self.fecha_final.setGeometry(680, 600, 100, 30)
 
-        # Salón (QComboBox)
-        row += 1
-        gd.addWidget(QLabel("Salón"), row, 0)
-        row += 1
-        self.salones = QComboBox()
+        y += 80
+        lbl_salon = QLabel("Salón", self.widget)
+        lbl_salon.setGeometry(470, 580, 35, 20)
+        self.salones = QComboBox(self.widget)
         self.salones.addItems([
             "102","103","104","109","110","201","202","206","209/lab tintes",
             "301","304","306","401","402","Artesanías","Auditorio","Biblioteca",
-            "Laboratorio 1","Laboratorio 2","Laboratorio 4","Laboratorio 4 / Salón 103",
-            "Laboratorio de Fotografía","Taller de Cerámica","Taller de Maderas",
-            "Taller de Serigrafía","Taller de Tejido plano","UP1","UP4","UP5",
-            "UP6","UP7","UP8","UP8/Taller de Serigrafía"
+            "Laboratorio 1","Laboratorio 2","Laboratorio 4","Laboratorio de Fotografía",
+            "Taller de Cerámica","Taller de Maderas","Taller de Serigrafía",
+            "Taller de Tejido plano","UP1","UP4","UP5","UP6","UP7","UP8","UP8/Taller de Serigrafía"
         ])
-        gd.addWidget(self.salones, row, 0)
+        self.salones.setGeometry(470, 600, 170, 30)
 
-        row += 1
-        self.agregar_optativa = QPushButton("Agregar")
-        gd.addWidget(self.agregar_optativa, row, 0)
+        y += 80
+        self.agregar_optativa = QPushButton("Agregar", self.widget)
+        self.agregar_optativa.setGeometry(810, 600, 100, 30)
 
-        # Docentes
-        col_doc = 2
-        rdoc = 0
-        gd.addWidget(QLabel("Buscar docente"), rdoc, col_doc)
-        rdoc += 1
-        self.buscar_docente = QLineEdit()
-        gd.addWidget(self.buscar_docente, rdoc, col_doc)
+        y = 10
+        #lbl_buscar_doc = QLabel("Buscar docente", self.widget)
+        #lbl_buscar_doc.setGeometry(x0 + 300, 10, 150, 20)
+        self.buscar_docente = QLineEdit(self.widget)
+        self.buscar_docente.setGeometry(800, 45, 240, 30)
+        self.buscar_docente.setPlaceholderText("BUSCAR DOCENTE")
 
-        rdoc += 1
-        gd.addWidget(QLabel("Docentes"), rdoc, col_doc)
-        rdoc += 1
-        self.listado_docentes = QTableWidget()
+        y += 80
+        #lbl_docentes = QLabel("Docentes", self.widget)
+        #lbl_docentes.setGeometry(x0 + 300, y, 150, 20)
+        self.listado_docentes = QTableWidget(self.widget)
+        self.listado_docentes.setGeometry(800, 85, 240, 300)
+        self.listado_docentes.setColumnCount(2)
+        self.listado_docentes.setHorizontalHeaderLabels(["RFC", "Docente"])
         self.listado_docentes.setAlternatingRowColors(True)
         self.listado_docentes.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.listado_docentes.horizontalHeader().setStretchLastSection(True)
@@ -223,21 +231,16 @@ class TabOptativas(QObject):
         self.listado_docentes.horizontalHeader().setStyleSheet(
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
-        self.listado_docentes.setColumnCount(2)
-        self.listado_docentes.setHorizontalHeaderLabels(["RFC", "Docente"])
-        self.listado_docentes.horizontalHeader().setStretchLastSection(True)
-        gd.addWidget(self.listado_docentes, rdoc, col_doc, 6, 1)
 
-        rdoc += 6
-        self.check_segundo_docente = QCheckBox("Agregar segundo docente")
-        gd.addWidget(self.check_segundo_docente, rdoc, col_doc)
+        y += 200
+        self.check_segundo_docente = QCheckBox("Agregar segundo docente", self.widget)
+        self.check_segundo_docente.setGeometry(800, 400, 200, 25)
 
-        rdoc += 1
-        self.listado_segundo_docentes = QTableWidget()
+        y += 40
+        self.listado_segundo_docentes = QTableWidget(self.widget)
+        self.listado_segundo_docentes.setGeometry(1050, 85, 240, 300)
         self.listado_segundo_docentes.setColumnCount(2)
         self.listado_segundo_docentes.setHorizontalHeaderLabels(["RFC", "Docente"])
-        self.listado_segundo_docentes.horizontalHeader().setStretchLastSection(True)
-        self.listado_segundo_docentes.hide()
         self.listado_segundo_docentes.setAlternatingRowColors(True)
         self.listado_segundo_docentes.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.listado_segundo_docentes.horizontalHeader().setStretchLastSection(True)
@@ -247,11 +250,11 @@ class TabOptativas(QObject):
         self.listado_segundo_docentes.horizontalHeader().setStyleSheet(
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
-        gd.addWidget(self.listado_segundo_docentes, rdoc, col_doc, 4, 1)
+        self.listado_segundo_docentes.hide()
 
-        main_layout.addWidget(derecha, stretch=2)
-
+        # Ajuste inicial de paridad
         self._aplicar_paridad_semestres()
+
 
     def _bloquear_docentes_y_semestres(self, bloquear: bool):
         # Bloquear tablas de docentes
