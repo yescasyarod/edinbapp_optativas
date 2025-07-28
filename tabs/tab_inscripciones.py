@@ -26,9 +26,12 @@ class TabInscripciones(QObject):
             self.table_estudiantes_tab3.selectRow(0)
 
     def _setup_ui(self):
+        from PySide6.QtWidgets import QAbstractItemView
+        from PySide6.QtGui import QPalette, QColor
+
         # widget contenedor principal
         self.widget = QWidget()
-        self.widget.setFixedSize(1000, 760)  # tamaño total de la pestaña
+        self.widget.setFixedSize(1360, 760)  # tamaño total de la pestaña
 
         # — Controles de filtro —
         self.combo_inscritos_tab3 = QComboBox(self.widget)
@@ -36,56 +39,72 @@ class TabInscripciones(QObject):
         self.combo_inscritos_tab3.addItems(["No inscritos", "Parcial", "Inscritos"])
 
         self.combo_semestre_tab3 = QComboBox(self.widget)
-        self.combo_semestre_tab3.setGeometry(200, 10, 100, 25)
+        self.combo_semestre_tab3.setGeometry(200, 10, 200, 25)
         self.combo_semestre_tab3.addItems(["Todos", "1°", "2°", "3°", "4°", "5°", "6°", "7°"])
 
         self.line_search_estudiante_tab3 = QLineEdit(self.widget)
         self.line_search_estudiante_tab3.setPlaceholderText("Buscar estudiante")
-        self.line_search_estudiante_tab3.setGeometry(10, 45, 290, 25)
+        self.line_search_estudiante_tab3.setGeometry(10, 45, 390, 25)
 
         # — Tabla Estudiantes —
-        #lbl_est = QLabel("Estudiantes", self.widget)
-        #lbl_est.setGeometry(10, 80, 100, 20)
-
         self.table_estudiantes_tab3 = QTableWidget(self.widget)
-        self.table_estudiantes_tab3.setGeometry(10, 105, 300, 370)
-        self.table_estudiantes_tab3.setColumnCount(4)
+        self.table_estudiantes_tab3.setGeometry(10, 105, 400, 390)
+        self.table_estudiantes_tab3.setColumnCount(3)
         self.table_estudiantes_tab3.setHorizontalHeaderLabels(
-            ["Matrícula", "Nombre", "Semestre", "Condición"]
+            ["Matrícula", "Nombre", "Semestre"]
         )
         self.table_estudiantes_tab3.setAlternatingRowColors(True)
         hdr = self.table_estudiantes_tab3.horizontalHeader()
         hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
-        hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-        self.table_estudiantes_tab3.setStyleSheet(
-            "background-color: #d9dced; alternate-background-color: #e8eaf4;"
-        )
-        self.table_estudiantes_tab3.horizontalHeader().setStyleSheet(
-            "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
-        )
+        hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        self.table_estudiantes_tab3.setColumnWidth(1, 200)
+        self.table_estudiantes_tab3.setStyleSheet("""
+            QTableWidget {
+                background-color: #d9dced;
+                alternate-background-color: #e8eaf4;
+            }
+            QTableWidget::item:selected,
+            QTableWidget::item:selected:active,
+            QTableWidget::item:selected:!active {
+                background-color: white;
+                color: rgb(12,28,140);
+            }
+            QHeaderView::section {
+                background-color: #bfc4e0;
+                font-weight: bold;
+                color: #0c1c8c;
+            }
+        """)
+
+        # selección: fila completa, única, fondo blanco + texto azul
+        self.table_estudiantes_tab3.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table_estudiantes_tab3.setSelectionMode(QAbstractItemView.SingleSelection)
+        pal_e = self.table_estudiantes_tab3.palette()
+        pal_e.setColor(QPalette.Highlight, QColor("white"))
+        pal_e.setColor(QPalette.HighlightedText, QColor(12, 28, 140))
+        self.table_estudiantes_tab3.setPalette(pal_e)
 
         # — Checkboxes Ya cursó —
         self.chk_ya_curso_a = QCheckBox("Ya cursó Optativa A", self.widget)
-        self.chk_ya_curso_a.setGeometry(515, 415, 160, 25)
+        self.chk_ya_curso_a.setGeometry(715, 415, 160, 25)
 
         self.chk_ya_curso_b = QCheckBox("Ya cursó Optativa B", self.widget)
-        self.chk_ya_curso_b.setGeometry(845, 415, 160, 25)
+        self.chk_ya_curso_b.setGeometry(1145, 415, 160, 25)
 
         # — Optativas A —
         self.line_search_optativa_a = QLineEdit(self.widget)
         self.line_search_optativa_a.setPlaceholderText("Buscar optativa A")
-        self.line_search_optativa_a.setGeometry(330, 70, 310, 25)
+        self.line_search_optativa_a.setGeometry(430, 70, 410, 25)
 
         lbl_a = QLabel("Optativas A", self.widget)
-        lbl_a.setGeometry(330, 25, 250, 40)
+        lbl_a.setGeometry(430, 25, 250, 40)
         lbl_a.setAlignment(Qt.AlignmentFlag.AlignLeft)
         lbl_a.setFont(QFont("Noto Sans", 20, QFont.Weight.Bold))
         lbl_a.setStyleSheet("color: rgb(12, 28, 140);")
 
         self.optativas_listado_a_tab3 = QTableWidget(self.widget)
-        self.optativas_listado_a_tab3.setGeometry(330, 105, 310, 300)
+        self.optativas_listado_a_tab3.setGeometry(430, 105, 410, 300)
         self.optativas_listado_a_tab3.setColumnCount(8)
         self.optativas_listado_a_tab3.setHorizontalHeaderLabels(
             ["Optativa", "Docente", "Semestres", "Cupo", "Día", "Inicio", "Fin", "Salón"]
@@ -98,22 +117,30 @@ class TabInscripciones(QObject):
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
 
+        # selección en tabla A
+        self.optativas_listado_a_tab3.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.optativas_listado_a_tab3.setSelectionMode(QAbstractItemView.SingleSelection)
+        pal_a = self.optativas_listado_a_tab3.palette()
+        pal_a.setColor(QPalette.Highlight, QColor("white"))
+        pal_a.setColor(QPalette.HighlightedText, QColor(12, 28, 140))
+        self.optativas_listado_a_tab3.setPalette(pal_a)
+
         self.btn_inscribir_a = QPushButton("Inscribir A", self.widget)
-        self.btn_inscribir_a.setGeometry(330, 415, 100, 30)
+        self.btn_inscribir_a.setGeometry(430, 415, 100, 30)
 
         # — Optativas B —
         self.line_search_optativa_b = QLineEdit(self.widget)
         self.line_search_optativa_b.setPlaceholderText("Buscar optativa B")
-        self.line_search_optativa_b.setGeometry(660, 70, 310, 25)
+        self.line_search_optativa_b.setGeometry(860, 70, 410, 25)
 
         lbl_b = QLabel("Optativas B", self.widget)
-        lbl_b.setGeometry(660, 25, 250, 40)
+        lbl_b.setGeometry(860, 25, 250, 40)
         lbl_b.setAlignment(Qt.AlignmentFlag.AlignLeft)
         lbl_b.setFont(QFont("Noto Sans", 20, QFont.Weight.Bold))
         lbl_b.setStyleSheet("color: rgb(12, 28, 140);")
 
         self.optativas_listado_b_tab3 = QTableWidget(self.widget)
-        self.optativas_listado_b_tab3.setGeometry(660, 105, 310, 300)
+        self.optativas_listado_b_tab3.setGeometry(860, 105, 410, 300)
         self.optativas_listado_b_tab3.setColumnCount(8)
         self.optativas_listado_b_tab3.setHorizontalHeaderLabels(
             ["Optativa", "Docente", "Semestres", "Cupo", "Día", "Inicio", "Fin", "Salón"]
@@ -126,8 +153,16 @@ class TabInscripciones(QObject):
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
 
+        # selección en tabla B
+        self.optativas_listado_b_tab3.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.optativas_listado_b_tab3.setSelectionMode(QAbstractItemView.SingleSelection)
+        pal_b = self.optativas_listado_b_tab3.palette()
+        pal_b.setColor(QPalette.Highlight, QColor("white"))
+        pal_b.setColor(QPalette.HighlightedText, QColor(12, 28, 140))
+        self.optativas_listado_b_tab3.setPalette(pal_b)
+
         self.btn_inscribir_b = QPushButton("Inscribir B", self.widget)
-        self.btn_inscribir_b.setGeometry(660, 415, 100, 30)
+        self.btn_inscribir_b.setGeometry(860, 415, 100, 30)
 
         # — Tabla Inscritas —
         lbl_ins = QLabel("Inscritas", self.widget)
@@ -152,6 +187,14 @@ class TabInscripciones(QObject):
         self.table_inscritas_tab3.horizontalHeader().setStyleSheet(
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
+
+        # selección en inscritas
+        self.table_inscritas_tab3.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table_inscritas_tab3.setSelectionMode(QAbstractItemView.SingleSelection)
+        pal_i = self.table_inscritas_tab3.palette()
+        pal_i.setColor(QPalette.Highlight, QColor("white"))
+        pal_i.setColor(QPalette.HighlightedText, QColor(12, 28, 140))
+        self.table_inscritas_tab3.setPalette(pal_i)
 
         self.btn_quitar_inscrita = QPushButton("Quitar Inscrita", self.widget)
         self.btn_quitar_inscrita.setGeometry(850, 580, 120, 30)
@@ -234,13 +277,15 @@ class TabInscripciones(QObject):
         texto = self.line_search_optativa_a.text().lower().strip()
         for i in range(self.optativas_listado_a_tab3.rowCount()):
             name = self.optativas_listado_a_tab3.item(i, 0).text().lower()
-            self.optativas_listado_a_tab3.setRowHidden(i, texto and texto not in name)
+            hide = bool(texto) and (texto not in name)
+            self.optativas_listado_a_tab3.setRowHidden(i, hide)
 
     def filtrar_optativas_b_tab3(self):
         texto = self.line_search_optativa_b.text().lower().strip()
         for i in range(self.optativas_listado_b_tab3.rowCount()):
             name = self.optativas_listado_b_tab3.item(i, 0).text().lower()
-            self.optativas_listado_b_tab3.setRowHidden(i, texto and texto not in name)
+            hide = bool(texto) and (texto not in name)
+            self.optativas_listado_b_tab3.setRowHidden(i, hide)
 
     def _reload_inscritas_tab3(self):
         self.table_inscritas_tab3.setRowCount(0)

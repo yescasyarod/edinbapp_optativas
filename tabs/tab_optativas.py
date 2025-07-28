@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QPushButton, QLabel, QLineEdit, QTableWidget, QTableWidgetItem,
     QCheckBox, QSpinBox, QTimeEdit, QFileDialog, QMessageBox, QComboBox
 )
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QPalette, QColor
 from utils import obtener_ruta
 
 
@@ -44,6 +44,9 @@ class TabOptativas(QObject):
         self.widget.setGeometry(0, 0, 1366, 768)
 
         # ——— Tabs A/B ———
+        from PySide6.QtWidgets import QAbstractItemView
+        from PySide6.QtGui import QPalette, QColor
+
         self.tabs = QTabWidget(self.widget)
         self.tabs.setGeometry(10, 10, 1360, 760)
 
@@ -51,16 +54,13 @@ class TabOptativas(QObject):
         tab_a = QWidget(self.tabs)
         self.tabs.addTab(tab_a, "Optativas A")
 
-        # Botón Cargar A
         self.btn_cargar_optativas_a = QPushButton("Cargar Optativas A (csv)", tab_a)
         self.btn_cargar_optativas_a.setGeometry(575, 360, 200, 30)
 
-        # Buscar A
         self.buscar_optativa_a = QLineEdit(tab_a)
         self.buscar_optativa_a.setPlaceholderText("BUSCAR OPTATIVA A")
         self.buscar_optativa_a.setGeometry(470, 10, 300, 30)
 
-        # Título A
         lbl_a = QLabel("Optativas A", tab_a)
         lbl_a.setAlignment(Qt.AlignmentFlag.AlignLeft)
         lbl_a.setGeometry(20, 10, 260, 30)
@@ -89,7 +89,14 @@ class TabOptativas(QObject):
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
 
-        # Editar/Quitar A
+        # Selección fila completa, única, con fondo blanco y texto azul
+        self.optativas_listado_a.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.optativas_listado_a.setSelectionMode(QAbstractItemView.SingleSelection)
+        pal_a = self.optativas_listado_a.palette()
+        pal_a.setColor(QPalette.Highlight, QColor("white"))
+        pal_a.setColor(QPalette.HighlightedText, QColor(12, 28, 140))
+        self.optativas_listado_a.setPalette(pal_a)
+
         self.editar_optativa_a = QPushButton("Editar A", tab_a)
         self.editar_optativa_a.setGeometry(10, 360, 100, 30)
         self.quitar_optativa_a = QPushButton("Quitar A", tab_a)
@@ -112,6 +119,7 @@ class TabOptativas(QObject):
         lbl_b.setFont(QFont("Noto Sans", 20, QFont.Weight.Bold))
         lbl_b.setStyleSheet("color: rgb(12, 28, 140);")
 
+        # Tabla B
         self.optativas_listado_b = QTableWidget(tab_b)
         self.optativas_listado_b.setGeometry(10, 50, 760, 300)
         self.optativas_listado_b.setColumnCount(12)
@@ -133,12 +141,20 @@ class TabOptativas(QObject):
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
 
+        # Selección para B
+        self.optativas_listado_b.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.optativas_listado_b.setSelectionMode(QAbstractItemView.SingleSelection)
+        pal_b = self.optativas_listado_b.palette()
+        pal_b.setColor(QPalette.Highlight, QColor("white"))
+        pal_b.setColor(QPalette.HighlightedText, QColor(12, 28, 140))
+        self.optativas_listado_b.setPalette(pal_b)
+
         self.editar_optativa_b = QPushButton("Editar B", tab_b)
         self.editar_optativa_b.setGeometry(10, 360, 100, 30)
         self.quitar_optativa_b = QPushButton("Quitar B", tab_b)
         self.quitar_optativa_b.setGeometry(120, 360, 100, 30)
 
-        # ——— Panel derecho (mismo padre) ———
+        # ——— Panel derecho ———
         x0 = 800
         y = 10
 
@@ -208,16 +224,13 @@ class TabOptativas(QObject):
         self.agregar_optativa = QPushButton("Agregar", self.widget)
         self.agregar_optativa.setGeometry(810, 600, 100, 30)
 
+        # ——— Listado de docentes ———
         y = 10
-        #lbl_buscar_doc = QLabel("Buscar docente", self.widget)
-        #lbl_buscar_doc.setGeometry(x0 + 300, 10, 150, 20)
         self.buscar_docente = QLineEdit(self.widget)
         self.buscar_docente.setGeometry(800, 45, 240, 30)
         self.buscar_docente.setPlaceholderText("BUSCAR DOCENTE")
 
         y += 80
-        #lbl_docentes = QLabel("Docentes", self.widget)
-        #lbl_docentes.setGeometry(x0 + 300, y, 150, 20)
         self.listado_docentes = QTableWidget(self.widget)
         self.listado_docentes.setGeometry(800, 85, 240, 300)
         self.listado_docentes.setColumnCount(2)
@@ -231,6 +244,14 @@ class TabOptativas(QObject):
         self.listado_docentes.horizontalHeader().setStyleSheet(
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
+
+        # Selección en listado_docentes
+        self.listado_docentes.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.listado_docentes.setSelectionMode(QAbstractItemView.SingleSelection)
+        pal_d1 = self.listado_docentes.palette()
+        pal_d1.setColor(QPalette.Highlight, QColor("white"))
+        pal_d1.setColor(QPalette.HighlightedText, QColor(12, 28, 140))
+        self.listado_docentes.setPalette(pal_d1)
 
         y += 200
         self.check_segundo_docente = QCheckBox("Agregar segundo docente", self.widget)
@@ -252,8 +273,17 @@ class TabOptativas(QObject):
         )
         self.listado_segundo_docentes.hide()
 
+        # Selección en listado_segundo_docentes
+        self.listado_segundo_docentes.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.listado_segundo_docentes.setSelectionMode(QAbstractItemView.SingleSelection)
+        pal_d2 = self.listado_segundo_docentes.palette()
+        pal_d2.setColor(QPalette.Highlight, QColor("white"))
+        pal_d2.setColor(QPalette.HighlightedText, QColor(12, 28, 140))
+        self.listado_segundo_docentes.setPalette(pal_d2)
+
         # Ajuste inicial de paridad
         self._aplicar_paridad_semestres()
+
 
 
     def _bloquear_docentes_y_semestres(self, bloquear: bool):

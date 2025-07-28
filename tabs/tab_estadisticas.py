@@ -17,41 +17,60 @@ class TabEstadisticas:
         # NO llamamos a cargar_estadisticas() aquí para que empiece VACÍO
 
     def _setup_ui(self):
-        layout = QVBoxLayout(self.widget)
+        # Fonde blanco en todo el widget
+        self.widget.setStyleSheet("background-color: white;")
 
-        # Título
-        title = QLabel("Top de Optativas por velocidad de llenado")
-        title.setFont(QFont("Noto Sans", 16, QFont.Weight.Bold))
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet("color: rgb(12,28,140);")
-        layout.addWidget(title)
+        # Título (posición absoluta)
+        self.label_titulo = QLabel("Top de Optativas", self.widget)
+        self.label_titulo.setGeometry(10, 10, 400, 30)
+        self.label_titulo.setFont(QFont("Noto Sans", 16, QFont.Weight.Bold))
+        self.label_titulo.setStyleSheet("color: rgb(12,28,140);")
 
-        # Tabla
-        self.table = QTableWidget()
+        # Tabla (misma posición y tamaño que en TabEstudiantes)
+        self.table = QTableWidget(self.widget)
+        self.table.setGeometry(10, 60, 800, 370)
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(["Optativa", "Inscritos", "Cupo", "% Llenado"])
         self.table.setAlternatingRowColors(True)
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        # estilos iguales a TabEstudiantes
-        self.table.setStyleSheet(
-            "background-color: #d9dced; alternate-background-color: #e8eaf4;"
-        )
-        self.table.horizontalHeader().setStyleSheet(
-            "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
-        )
-        layout.addWidget(self.table)
+        self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
 
-        # Botón reiniciar
-        self.btn_reiniciar = QPushButton("Reiniciar estadísticas")
-        self.btn_reiniciar.setFont(QFont("Noto Sans", 8, QFont.Weight.Bold))
+        # Columna 0 estira, resto al contenido
+        hdr = self.table.horizontalHeader()
+        hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+
+        # Misma estética que TabEstudiantes
+        self.table.setStyleSheet("""
+            QTableWidget {
+                background-color: #d9dced;
+                alternate-background-color: #e8eaf4;
+            }
+            QTableWidget::item:selected,
+            QTableWidget::item:selected:active,
+            QTableWidget::item:selected:!active {
+                background-color: white;
+                color: rgb(12,28,140);
+            }
+            QHeaderView::section {
+                background-color: #bfc4e0;
+                font-weight: bold;
+                color: #0c1c8c;
+            }
+        """)
+
+        # Botón Reiniciar estadísticas (posición absoluta)
+        self.btn_reiniciar = QPushButton("Reiniciar estadísticas", self.widget)
+        self.btn_reiniciar.setGeometry(10, 455, 180, 31)
+        self.btn_reiniciar.setFont(QFont("Noto Sans", 10, QFont.Weight.Medium))
         self.btn_reiniciar.setStyleSheet(
-            "border:1.5px solid #0c1c8c; border-radius:12; "
+            "border:1.5px solid #0c1c8c; border-radius:12px; "
             "color: rgb(12,28,140); background-color:white;"
         )
-        layout.addWidget(self.btn_reiniciar)
+
 
     def _connect_signals(self):
         # limpiar tabla al pulsar Reiniciar

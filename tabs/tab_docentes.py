@@ -9,7 +9,7 @@ import csv
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QPalette, QColor
 from PySide6.QtCore import Signal, QObject
 from PySide6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QPushButton,
@@ -77,9 +77,38 @@ class TabDocentes(QObject):
         self.table_profesores.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table_profesores.horizontalHeader().setStretchLastSection(True)
         self.table_profesores.setColumnWidth(1, 400)
-        self.table_profesores.setStyleSheet(
-            "background-color: #d9dced; alternate-background-color: #e8eaf4;"
-        )
+
+        # —> Selección de filas completas y única
+        from PySide6.QtWidgets import QAbstractItemView
+        self.table_profesores.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table_profesores.setSelectionMode(QAbstractItemView.SingleSelection)
+
+        # —> Paleta para que la selección sea blanca con texto azul
+        from PySide6.QtGui import QPalette, QColor
+        pal = self.table_profesores.palette()
+        pal.setColor(QPalette.Highlight, QColor("white"))             # fondo de la selección
+        pal.setColor(QPalette.HighlightedText, QColor(12, 28, 140))   # texto seleccionado
+        self.table_profesores.setPalette(pal)
+
+        # Estilos de fondo y selección
+        self.table_profesores.setStyleSheet("""
+            QTableWidget {
+                background-color: #d9dced;
+                alternate-background-color: #e8eaf4;
+            }
+            /* Resalta siempre en blanco, tanto con foco como sin foco */
+            QTableWidget::item:selected,
+            QTableWidget::item:selected:active,
+            QTableWidget::item:selected:!active {
+                background-color: white;
+                color: rgb(12, 28, 140);
+            }
+            QHeaderView::section {
+                background-color: #bfc4e0;
+                font-weight: bold;
+                color: #0c1c8c;
+            }
+        """)
         self.table_profesores.horizontalHeader().setStyleSheet(
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )

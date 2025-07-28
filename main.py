@@ -192,8 +192,7 @@ class MainWindow(QMainWindow):
 
         self.tab_opt = TabOptativas(self.db, is_admin=(self.role == "admin"))
         self.tabWidget.addTab(self.tab_opt.widget, "OPTATIVAS")
-
-        self.tab_doc.docentes_changed.connect(self.tab_opt.cargar_docentes_optativas)
+        
 
         self.tab_ins = TabInscripciones(self.db)
         self.tabWidget.addTab(self.tab_ins.widget, "INSCRIPCIONES")
