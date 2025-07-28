@@ -17,26 +17,88 @@ class TabListas:
         self._setup_ui()
 
     def _setup_ui(self):
-        main = QVBoxLayout(self.widget)
+        # — Estilos razonables, iguales al LoginDialog —
+        self.widget.setStyleSheet("""
+            QWidget {
+                background-color: white;
+            }
+            QLabel {
+                font: bold 14px "Noto Sans";
+                color: rgb(12,28,140);
+            }
+            QLineEdit {
+                border: 1.5px solid #0c1c8c;
+                border-radius: 5px;
+                min-height: 32px;
+                font: bold 14px "Noto Sans";
+                color: rgb(12,28,140);
+                padding: 0 8px;
+                background-color: white;
+            }
+            QLineEdit:focus {
+                border-color: #4054a1;
+            }
+            QLineEdit::placeholder {
+                color: rgb(96,102,140);
+            }
+            QComboBox {
+                border: 1.5px solid #0c1c8c;
+                border-radius: 5px;
+                min-height: 32px;
+                font: bold 14px "Noto Sans";
+                color: rgb(12,28,140);
+                padding: 0 8px;
+                background-color: white;
+            }
+            QComboBox:focus {
+                border-color: #4054a1;
+            }
+            QComboBox QAbstractItemView {
+                selection-background-color: #4054a1;
+                outline: none;
+            }
+            QPushButton {
+                border: 1.5px solid #0c1c8c;
+                border-radius: 12px;
+                font: bold 14px "Noto Sans";
+                color: white;
+                background-color: rgb(12,28,140);
+                min-height: 36px;
+                padding: 4px 12px;
+            }
+            QPushButton:hover {
+                background-color: #4054a1;
+            }
+            QPushButton:pressed {
+                background-color: #0a0f3e;
+            }
+        """)
 
-        main.addStretch()
+        # — Layout centrado verticalmente —
+        main = QVBoxLayout(self.widget)
+        main.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        main.setContentsMargins(0, 0, 0, 0)
+        main.setSpacing(30)
+
         cont = QWidget()
         lay = QVBoxLayout(cont)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(20)
+        lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        lbl = QLabel("Coordinador(a):")
-        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Coordinador
+        lbl = QLabel("COORDINADOR(A):")
         lay.addWidget(lbl)
 
         self.line_coordinador = QLineEdit()
+        self.line_coordinador.setPlaceholderText("Nombre del coordinador")
         self.line_coordinador.setText(self.settings.value("coordinador", ""))
         self.line_coordinador.editingFinished.connect(self.save_coordinador)
-        self.line_coordinador.setFixedWidth(250)
-        lay.addWidget(self.line_coordinador, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.line_coordinador.setFixedWidth(300)
+        lay.addWidget(self.line_coordinador)
 
-        lbl2 = QLabel("Ciclo/Periodo:")
-        lbl2.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Ciclo/Periodo
+        lbl2 = QLabel("CICLO/PERIODO:")
         lay.addWidget(lbl2)
 
         self.combo_ciclo_listas = QComboBox()
@@ -47,16 +109,16 @@ class TabListas:
             f"{año_actual}-{año_actual + 1}/1"
         ]
         self.combo_ciclo_listas.addItems(items)
-        self.combo_ciclo_listas.setFixedWidth(250)
-        lay.addWidget(self.combo_ciclo_listas, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.combo_ciclo_listas.setFixedWidth(300)
+        lay.addWidget(self.combo_ciclo_listas)
 
-        self.btn_generar_listas = QPushButton("Generar listas")
-        self.btn_generar_listas.setFixedWidth(250)
+        # Botón Generar
+        self.btn_generar_listas = QPushButton("GENERAR LISTAS")
+        self.btn_generar_listas.setFixedWidth(300)
         self.btn_generar_listas.clicked.connect(self.generar_listas)
-        lay.addWidget(self.btn_generar_listas, alignment=Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(self.btn_generar_listas)
 
         main.addWidget(cont)
-        main.addStretch()
 
     def save_coordinador(self):
         self.settings.setValue("coordinador", self.line_coordinador.text())

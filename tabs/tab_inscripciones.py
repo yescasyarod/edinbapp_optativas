@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QPushButton, QCheckBox, QHeaderView,
     QMessageBox, QTableWidgetItem, QApplication
 )
+from PySide6.QtGui import QFont
 
 class TabInscripciones(QObject):
     inscripciones_changed = Signal()
@@ -25,25 +26,29 @@ class TabInscripciones(QObject):
             self.table_estudiantes_tab3.selectRow(0)
 
     def _setup_ui(self):
-        grid = QGridLayout(self.widget)
+        # widget contenedor principal
+        self.widget = QWidget()
+        self.widget.setFixedSize(1000, 760)  # tamaño total de la pestaña
 
-        # Controles de filtro
-        self.combo_inscritos_tab3 = QComboBox()
-        # ahora incluye "Parcial" para los que tienen solo A o solo B
+        # — Controles de filtro —
+        self.combo_inscritos_tab3 = QComboBox(self.widget)
+        self.combo_inscritos_tab3.setGeometry(10, 10, 180, 25)
         self.combo_inscritos_tab3.addItems(["No inscritos", "Parcial", "Inscritos"])
-        grid.addWidget(self.combo_inscritos_tab3, 0, 0)
 
-        self.combo_semestre_tab3 = QComboBox()
+        self.combo_semestre_tab3 = QComboBox(self.widget)
+        self.combo_semestre_tab3.setGeometry(200, 10, 100, 25)
         self.combo_semestre_tab3.addItems(["Todos", "1°", "2°", "3°", "4°", "5°", "6°", "7°"])
-        grid.addWidget(self.combo_semestre_tab3, 1, 0)
 
-        self.line_search_estudiante_tab3 = QLineEdit()
+        self.line_search_estudiante_tab3 = QLineEdit(self.widget)
         self.line_search_estudiante_tab3.setPlaceholderText("Buscar estudiante")
-        grid.addWidget(self.line_search_estudiante_tab3, 2, 0)
+        self.line_search_estudiante_tab3.setGeometry(10, 45, 290, 25)
 
-        # Tabla Estudiantes
-        grid.addWidget(QLabel("Estudiantes"), 3, 0)
-        self.table_estudiantes_tab3 = QTableWidget()
+        # — Tabla Estudiantes —
+        #lbl_est = QLabel("Estudiantes", self.widget)
+        #lbl_est.setGeometry(10, 80, 100, 20)
+
+        self.table_estudiantes_tab3 = QTableWidget(self.widget)
+        self.table_estudiantes_tab3.setGeometry(10, 105, 300, 370)
         self.table_estudiantes_tab3.setColumnCount(4)
         self.table_estudiantes_tab3.setHorizontalHeaderLabels(
             ["Matrícula", "Nombre", "Semestre", "Condición"]
@@ -60,20 +65,27 @@ class TabInscripciones(QObject):
         self.table_estudiantes_tab3.horizontalHeader().setStyleSheet(
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
-        grid.addWidget(self.table_estudiantes_tab3, 4, 0, 11, 1)
 
-        # Checkboxes Ya cursó
-        self.chk_ya_curso_a = QCheckBox("Ya cursó Optativa A")
-        grid.addWidget(self.chk_ya_curso_a, 0, 1)
-        self.chk_ya_curso_b = QCheckBox("Ya cursó Optativa B")
-        grid.addWidget(self.chk_ya_curso_b, 0, 2)
+        # — Checkboxes Ya cursó —
+        self.chk_ya_curso_a = QCheckBox("Ya cursó Optativa A", self.widget)
+        self.chk_ya_curso_a.setGeometry(515, 415, 160, 25)
 
-        # Optativas A
-        self.line_search_optativa_a = QLineEdit()
+        self.chk_ya_curso_b = QCheckBox("Ya cursó Optativa B", self.widget)
+        self.chk_ya_curso_b.setGeometry(845, 415, 160, 25)
+
+        # — Optativas A —
+        self.line_search_optativa_a = QLineEdit(self.widget)
         self.line_search_optativa_a.setPlaceholderText("Buscar optativa A")
-        grid.addWidget(self.line_search_optativa_a, 1, 1)
-        grid.addWidget(QLabel("Optativas A"), 2, 1)
-        self.optativas_listado_a_tab3 = QTableWidget()
+        self.line_search_optativa_a.setGeometry(330, 70, 310, 25)
+
+        lbl_a = QLabel("Optativas A", self.widget)
+        lbl_a.setGeometry(330, 25, 250, 40)
+        lbl_a.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        lbl_a.setFont(QFont("Noto Sans", 20, QFont.Weight.Bold))
+        lbl_a.setStyleSheet("color: rgb(12, 28, 140);")
+
+        self.optativas_listado_a_tab3 = QTableWidget(self.widget)
+        self.optativas_listado_a_tab3.setGeometry(330, 105, 310, 300)
         self.optativas_listado_a_tab3.setColumnCount(8)
         self.optativas_listado_a_tab3.setHorizontalHeaderLabels(
             ["Optativa", "Docente", "Semestres", "Cupo", "Día", "Inicio", "Fin", "Salón"]
@@ -85,16 +97,23 @@ class TabInscripciones(QObject):
         self.optativas_listado_a_tab3.horizontalHeader().setStyleSheet(
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
-        grid.addWidget(self.optativas_listado_a_tab3, 3, 1, 6, 1)
-        self.btn_inscribir_a = QPushButton("Inscribir A")
-        grid.addWidget(self.btn_inscribir_a, 9, 1)
 
-        # Optativas B
-        self.line_search_optativa_b = QLineEdit()
+        self.btn_inscribir_a = QPushButton("Inscribir A", self.widget)
+        self.btn_inscribir_a.setGeometry(330, 415, 100, 30)
+
+        # — Optativas B —
+        self.line_search_optativa_b = QLineEdit(self.widget)
         self.line_search_optativa_b.setPlaceholderText("Buscar optativa B")
-        grid.addWidget(self.line_search_optativa_b, 1, 2)
-        grid.addWidget(QLabel("Optativas B"), 2, 2)
-        self.optativas_listado_b_tab3 = QTableWidget()
+        self.line_search_optativa_b.setGeometry(660, 70, 310, 25)
+
+        lbl_b = QLabel("Optativas B", self.widget)
+        lbl_b.setGeometry(660, 25, 250, 40)
+        lbl_b.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        lbl_b.setFont(QFont("Noto Sans", 20, QFont.Weight.Bold))
+        lbl_b.setStyleSheet("color: rgb(12, 28, 140);")
+
+        self.optativas_listado_b_tab3 = QTableWidget(self.widget)
+        self.optativas_listado_b_tab3.setGeometry(660, 105, 310, 300)
         self.optativas_listado_b_tab3.setColumnCount(8)
         self.optativas_listado_b_tab3.setHorizontalHeaderLabels(
             ["Optativa", "Docente", "Semestres", "Cupo", "Día", "Inicio", "Fin", "Salón"]
@@ -106,13 +125,19 @@ class TabInscripciones(QObject):
         self.optativas_listado_b_tab3.horizontalHeader().setStyleSheet(
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
-        grid.addWidget(self.optativas_listado_b_tab3, 3, 2, 6, 1)
-        self.btn_inscribir_b = QPushButton("Inscribir B")
-        grid.addWidget(self.btn_inscribir_b, 9, 2)
 
-        # Tabla Inscritas
-        grid.addWidget(QLabel("Inscritas"), 10, 1, 1, 2)
-        self.table_inscritas_tab3 = QTableWidget()
+        self.btn_inscribir_b = QPushButton("Inscribir B", self.widget)
+        self.btn_inscribir_b.setGeometry(660, 415, 100, 30)
+
+        # — Tabla Inscritas —
+        lbl_ins = QLabel("Inscritas", self.widget)
+        lbl_ins.setGeometry(10, 510, 100, 20)
+        lbl_ins.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        lbl_ins.setFont(QFont("Noto Sans", 12, QFont.Weight.Bold))
+        lbl_ins.setStyleSheet("color: rgb(12, 28, 140);")
+
+        self.table_inscritas_tab3 = QTableWidget(self.widget)
+        self.table_inscritas_tab3.setGeometry(10, 540, 820, 100)
         self.table_inscritas_tab3.setColumnCount(5)
         self.table_inscritas_tab3.setHorizontalHeaderLabels(
             ["Matrícula", "Optativa", "Día", "Horario", "Docente"]
@@ -127,9 +152,10 @@ class TabInscripciones(QObject):
         self.table_inscritas_tab3.horizontalHeader().setStyleSheet(
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
-        grid.addWidget(self.table_inscritas_tab3, 11, 1, 3, 2)
-        self.btn_quitar_inscrita = QPushButton("Quitar Inscrita")
-        grid.addWidget(self.btn_quitar_inscrita, 14, 1, 1, 2)
+
+        self.btn_quitar_inscrita = QPushButton("Quitar Inscrita", self.widget)
+        self.btn_quitar_inscrita.setGeometry(850, 580, 120, 30)
+
 
     def _connect_signals(self):
         self.combo_inscritos_tab3.currentIndexChanged.connect(self.cargar_estudiantes_tab3)

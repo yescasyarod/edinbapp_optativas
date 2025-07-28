@@ -157,9 +157,31 @@ class MainWindow(QMainWindow):
         # UI principal
         central = QWidget()
         lay = QVBoxLayout(central)
+        # UI principal
+        central = QWidget()
+        lay = QVBoxLayout(central)
         self.tabWidget = QTabWidget()
         lay.addWidget(self.tabWidget)
         self.setCentralWidget(central)
+
+        # — Estilo de las pestañas —
+        self.tabWidget.setStyleSheet("""
+            /* estilo general de cada pestaña */
+            QTabBar::tab {
+                font: bold 12px "Noto Sans";
+                color: rgb(12,28,140);
+                background: transparent;
+                padding: 8px 16px;
+                border-top-left-radius: 5px;
+                border-top-right-radius: 5px;
+            }
+            /* pestaña seleccionada */
+            QTabBar::tab:selected {
+                background-color: rgb(12,28,140);
+                color: white;
+            }
+
+        """)
 
         # Pestañas (pasan is_admin solo a quienes cargan CSV)
         self.tab_est = TabEstudiantes(self.db, is_admin=(self.role == "admin"))
