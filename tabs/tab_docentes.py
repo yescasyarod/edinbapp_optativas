@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
+from PySide6.QtCore import Signal, QObject
 from PySide6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QPushButton,
     QTableWidget, QTableWidgetItem, QMessageBox, QFileDialog
@@ -18,8 +19,10 @@ from PySide6.QtWidgets import (
 from utils import obtener_ruta
 
 
-class TabDocentes:
+class TabDocentes(QObject):
+    docentes_changed = Signal()
     def __init__(self, db, is_admin: bool = False):
+        super().__init__()
         self.db = db
         self.is_admin = is_admin
         self.widget = QWidget()
@@ -233,6 +236,7 @@ class TabDocentes:
         self.line_apellido_mat_profesor.clear()
         self.cargar_profesores_tab1()
         self.filtrar_profesores_tab1()
+        self.docentes_changed.emit()
 
     def editar_profesor(self):
         fila = self.table_profesores.currentRow()
@@ -273,6 +277,9 @@ class TabDocentes:
             return
         self.db.run_query("DELETE FROM docentes WHERE rfc=?", (rfc,))
         self.table_profesores.removeRow(fila)
+        self.cargar_profesores_tab1()
+        self.filtrar_profesores_tab1()
+        self.docentes_changed.emit()
 
     def cargar_docentes_csv(self):
         fn, _ = QFileDialog.getOpenFileName(
@@ -300,3 +307,4 @@ class TabDocentes:
                 )
         self.cargar_profesores_tab1()
         self.filtrar_profesores_tab1()
+        self.docentes_changed.emit()
