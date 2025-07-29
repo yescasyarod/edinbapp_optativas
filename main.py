@@ -239,7 +239,7 @@ class MainWindow(QMainWindow):
             '<a href="https://www.instagram.com/yarod.yescas.cupich/" '
             'style="text-decoration:none; color:#0000ff;">'
             'Yarod Yescas Cupich</a><br>'
-            'Diseñadora de la Interfaz: Karen<br>'
+            'Diseñadora de la Interfaz: Karen Ramírez Gordillo<br>'
             'Asesor del proyecto: David Perrusquía González<br><br>'
             'Esta aplicación utiliza la biblioteca Qt a través de PySide6.<br>'
             'Qt está licenciada bajo LGPLv3.<br>'

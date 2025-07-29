@@ -168,7 +168,7 @@ class TabListas:
                 """SELECT e.matricula,e.nombre,e.apellido_paterno,e.apellido_materno,e.semestre
                    FROM inscripciones i
                    JOIN estudiantes e ON i.matricula=e.matricula
-                   WHERE i.optativa_id=? AND e.estado='Activo'
+                   WHERE i.optativa_id=? AND UPPER(e.estado)='ACTIVO'
                    ORDER BY e.nombre,e.apellido_paterno,e.apellido_materno""",
                 (opt_id,), fetch="all"
             )
