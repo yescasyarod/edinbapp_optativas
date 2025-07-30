@@ -314,23 +314,42 @@ class TabInscripciones(QObject):
             self.table_inscritas_tab3.setItem(i, 4, QTableWidgetItem(docente))
 
     def _on_estudiante_tab3_changed(self):
+        """
+        Se ejecuta al cambiar la fila seleccionada en la tabla de estudiantes.
+        Guarda el estado de 'Ya cursó A/B' del estudiante anterior y restablece
+        los checkboxes para el nuevo estudiante.
+        """
         old = self._last_tab3_student_row
+        # 1) Guardar el estado de A/B del estudiante anterior
         if old >= 0:
             mat_old = self.table_estudiantes_tab3.item(old, 0).text()
             self.ya_curso[mat_old] = (
                 self.chk_ya_curso_a.isChecked(),
                 self.chk_ya_curso_b.isChecked()
             )
+
+        # 2) Actualizar índice de la nueva fila
         new = self.table_estudiantes_tab3.currentRow()
         self._last_tab3_student_row = new
 
-        # 1) recarga la lista de inscritas
+        # 3) Recuperar y aplicar el estado de checkboxes para el nuevo estudiante
+        if new >= 0:
+            mat_new = self.table_estudiantes_tab3.item(new, 0).text()
+            yaA, yaB = self.ya_curso.get(mat_new, (False, False))
+            # Bloquear señales para evitar disparos accidentales
+            self.chk_ya_curso_a.blockSignals(True)
+            self.chk_ya_curso_b.blockSignals(True)
+            self.chk_ya_curso_a.setChecked(yaA)
+            self.chk_ya_curso_b.setChecked(yaB)
+            self.chk_ya_curso_a.blockSignals(False)
+            self.chk_ya_curso_b.blockSignals(False)
+
+        # 4) Recargar datos dependientes de la selección
         self._reload_inscritas_tab3()
-        # 2) vuelve a poblar los listados de optativas disponibles
         self.cargar_optativas_a_tab3()
         self.cargar_optativas_b_tab3()
-        # 3) aplica habilitado/deshabilitado por solapamientos
         self._control_optativas_a_b_habilitadas()
+
 
     def _on_checkbox_ya_curso_changed(self):
         row = self.table_estudiantes_tab3.currentRow()
