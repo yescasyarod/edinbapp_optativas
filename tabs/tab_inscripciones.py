@@ -30,7 +30,6 @@ class TabInscripciones(QObject):
         from PySide6.QtGui import QPalette, QColor
 
         # widget contenedor principal
-        self.widget = QWidget()
         self.widget.setFixedSize(1360, 760)  # tamaño total de la pestaña
 
         # — Controles de filtro —
@@ -217,7 +216,7 @@ class TabInscripciones(QObject):
         self.table_estudiantes_tab3.setRowCount(0)
         all_students = self.db.run_query(
             "SELECT matricula, nombre, apellido_paterno, apellido_materno, semestre, estado "
-            "FROM estudiantes WHERE estado='Activo' "
+            "FROM estudiantes WHERE UPPER(estado) = 'ACTIVO' "
             "ORDER BY nombre, apellido_paterno, apellido_materno",
             fetch="all"
         )
