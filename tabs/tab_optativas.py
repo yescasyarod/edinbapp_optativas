@@ -563,7 +563,12 @@ class TabOptativas(QObject):
 
     def _edit_optativa(self, table, fila, tipo):
         self.editando_optativa = True
+        # Bloquear docentes y semestres (inicialmente)
         self._bloquear_docentes_y_semestres(True)
+        # REHABILITAR sólo los checkboxes de semestres para permitir edición
+        for cb in self.semestre_checkboxes:
+            cb.setDisabled(False)
+
         self.editando_optativa_tipo = tipo
         self.editando_optativa_id = int(table.item(fila, 8).text())
         self.agregar_optativa.setText("Aceptar")
@@ -618,6 +623,7 @@ class TabOptativas(QObject):
                     break
         else:
             self.check_segundo_docente.setChecked(False)
+
 
     # ─────────────────────────── Util ───────────────────────────
     def filtrar_docentes_optativas(self, texto):
