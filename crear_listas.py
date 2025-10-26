@@ -16,9 +16,6 @@ pdfmetrics.registerFont(TTFont("Montserrat-Bold", obtener_ruta("fuentes/Montserr
 pdfmetrics.registerFont(TTFont("Montserrat-ExtraBold", obtener_ruta("fuentes/Montserrat-ExtraBold.ttf")))
 
 def creacion_de_listas(tabla1="", tabla2="", tabla3="", nombre=""):
-    # Ordenar la lista de alumnos alfabéticamente por apellidos.
-    # Se asume que cada elemento de tabla3 es una tupla (matricula, nombre_completo)
-    # y que nombre_completo tiene el formato "APELLIDO_PATERNO APELLIDO_MATERNO NOMBRES..."
     tabla3_sorted = sorted(
         tabla3,
         key=lambda alumno: (
@@ -26,9 +23,8 @@ def creacion_de_listas(tabla1="", tabla2="", tabla3="", nombre=""):
             alumno[1].split()[1] if len(alumno[1].split()) > 1 else ""
         )
     )
-
-    # Dar nombre y formato a la hoja
-    pdf_file = f"{nombre}.pdf"
+    # Asegurar extensión correcta (evita .pdf.pdf)
+    pdf_file = nombre if str(nombre).lower().endswith(".pdf") else f"{nombre}.pdf"
     c = canvas.Canvas(pdf_file, pagesize=landscape(letter))
 
     # --- Tabla superior (data_0) ---
@@ -80,7 +76,7 @@ def creacion_de_listas(tabla1="", tabla2="", tabla3="", nombre=""):
     col_widths = [110, 96, 242, 71, 128]
     row_heights = [13] * 5
     data_1 = [["" for _ in range(num_cols)] for _ in range(num_rows)]
-    data_1[2][0] = f"OPTATIVA {tabla2['tipo']}"
+    data_1[2][0] = f"ASIGNATURA {tabla2['tipo']}"
     data_1[0][1] = "ASIGNATURA"
     data_1[1][1] = "CURSO"
     data_1[2][1] = "NODO"

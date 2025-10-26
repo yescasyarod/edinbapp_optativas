@@ -17,33 +17,28 @@ class TabEstadisticas:
         # NO llamamos a cargar_estadisticas() aquí para que empiece VACÍO
 
     def _setup_ui(self):
-        # Fonde blanco en todo el widget
         self.widget.setStyleSheet("background-color: white;")
 
-        # Título (posición absoluta)
-        self.label_titulo = QLabel("Top de Optativas", self.widget)
+        self.label_titulo = QLabel("Top de Asignaturas", self.widget)
         self.label_titulo.setGeometry(10, 10, 400, 30)
         self.label_titulo.setFont(QFont("Noto Sans", 16, QFont.Weight.Bold))
         self.label_titulo.setStyleSheet("color: rgb(12,28,140);")
 
-        # Tabla (misma posición y tamaño que en TabEstudiantes)
         self.table = QTableWidget(self.widget)
         self.table.setGeometry(10, 60, 800, 370)
         self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(["Optativa", "Inscritos", "Cupo", "% Llenado"])
+        self.table.setHorizontalHeaderLabels(["Asignatura", "Inscritos", "Cupo", "% Llenado"])
         self.table.setAlternatingRowColors(True)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
 
-        # Columna 0 estira, resto al contenido
         hdr = self.table.horizontalHeader()
         hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
 
-        # Misma estética que TabEstudiantes
         self.table.setStyleSheet("""
             QTableWidget {
                 background-color: #d9dced;
@@ -62,7 +57,6 @@ class TabEstadisticas:
             }
         """)
 
-        # Botón Reiniciar estadísticas (posición absoluta)
         self.btn_reiniciar = QPushButton("Reiniciar estadísticas", self.widget)
         self.btn_reiniciar.setGeometry(10, 455, 180, 31)
         self.btn_reiniciar.setFont(QFont("Noto Sans", 10, QFont.Weight.Medium))
@@ -70,6 +64,7 @@ class TabEstadisticas:
             "border:1.5px solid #0c1c8c; border-radius:12px; "
             "color: rgb(12,28,140); background-color:white;"
         )
+
 
 
     def _connect_signals(self):

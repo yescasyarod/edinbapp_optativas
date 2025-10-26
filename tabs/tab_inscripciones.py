@@ -93,10 +93,10 @@ class TabInscripciones(QObject):
 
         # — Optativas A —
         self.line_search_optativa_a = QLineEdit(self.widget)
-        self.line_search_optativa_a.setPlaceholderText("Buscar optativa A")
+        self.line_search_optativa_a.setPlaceholderText("Buscar asignatura A")
         self.line_search_optativa_a.setGeometry(430, 70, 410, 25)
 
-        lbl_a = QLabel("Optativas A", self.widget)
+        lbl_a = QLabel("Asignaturas A", self.widget)
         lbl_a.setGeometry(430, 25, 250, 40)
         lbl_a.setAlignment(Qt.AlignmentFlag.AlignLeft)
         lbl_a.setFont(QFont("Noto Sans", 20, QFont.Weight.Bold))
@@ -129,10 +129,10 @@ class TabInscripciones(QObject):
 
         # — Optativas B —
         self.line_search_optativa_b = QLineEdit(self.widget)
-        self.line_search_optativa_b.setPlaceholderText("Buscar optativa B")
+        self.line_search_optativa_b.setPlaceholderText("Buscar asignatura B")
         self.line_search_optativa_b.setGeometry(860, 70, 410, 25)
 
-        lbl_b = QLabel("Optativas B", self.widget)
+        lbl_b = QLabel("Asignaturas B", self.widget)
         lbl_b.setGeometry(860, 25, 250, 40)
         lbl_b.setAlignment(Qt.AlignmentFlag.AlignLeft)
         lbl_b.setFont(QFont("Noto Sans", 20, QFont.Weight.Bold))
@@ -174,7 +174,7 @@ class TabInscripciones(QObject):
         self.table_inscritas_tab3.setGeometry(10, 540, 820, 100)
         self.table_inscritas_tab3.setColumnCount(5)
         self.table_inscritas_tab3.setHorizontalHeaderLabels(
-            ["Matrícula", "Optativa", "Día", "Horario", "Docente"]
+            ["Matrícula", "Asignatura", "Día", "Horario", "Docente"]
         )
         self.table_inscritas_tab3.setAlternatingRowColors(True)
         self.table_inscritas_tab3.horizontalHeader().setSectionResizeMode(
@@ -214,15 +214,18 @@ class TabInscripciones(QObject):
 
     def cargar_estudiantes_tab3(self):
         self.table_estudiantes_tab3.setRowCount(0)
+        # Estados permitidos para inscribir (excluye bajas)
+        estados_ok = ("REGULAR","RECURSAMIENTO","RECURSAMIENTO PARALELO","MOVILIDAD PARCIAL","MOVILIDAD")
+        placeholders = ",".join(["?"]*len(estados_ok))
         all_students = self.db.run_query(
-            "SELECT matricula, nombre, apellido_paterno, apellido_materno, semestre, estado "
-            "FROM estudiantes WHERE UPPER(estado) = 'ACTIVO' "
-            "ORDER BY nombre, apellido_paterno, apellido_materno",
-            fetch="all"
+            f"SELECT matricula, nombre, apellido_paterno, apellido_materno, semestre, estado "
+            f"FROM estudiantes WHERE UPPER(estado) IN ({placeholders}) "
+            f"ORDER BY nombre, apellido_paterno, apellido_materno",
+            tuple(estados_ok), fetch="all"
         )
         # map matrícula -> tipos inscritos
         tipos_map = {}
-        for mat, *_ in all_students:
+        for mat, *_ in all_students or []:
             rows = self.db.run_query(
                 "SELECT o.tipo FROM inscripciones i JOIN optativas o ON i.optativa_id=o.id WHERE i.matricula=?",
                 (mat,), fetch="all"
@@ -234,7 +237,7 @@ class TabInscripciones(QObject):
         sem_sel = self.combo_semestre_tab3.currentText()
         texto = self.line_search_estudiante_tab3.text().lower().strip()
 
-        for mat, nom, ap, am, sem, est in all_students:
+        for mat, nom, ap, am, sem, est in all_students or []:
             if sem == "8°":
                 continue
             nombre_comp = f"{nom} {ap} {am}"
@@ -248,17 +251,13 @@ class TabInscripciones(QObject):
             llevaA = ("A" in tipos) or yaA
             llevaB = ("B" in tipos) or yaB
 
-            # filtrar según el modo seleccionado
             if modo == "Inscritos":
-                # sólo los que tienen A **y** B
                 if not (llevaA and llevaB):
                     continue
             elif modo == "No inscritos":
-                # sólo los que no tienen ni A ni B
                 if (llevaA or llevaB):
                     continue
             elif modo == "Parcial":
-                # sólo los que tienen exactamente una de las dos
                 if not ((llevaA and not llevaB) or (llevaB and not llevaA)):
                     continue
 
@@ -269,7 +268,6 @@ class TabInscripciones(QObject):
             self.table_estudiantes_tab3.setItem(row_idx, 3, QTableWidgetItem(est))
             row_idx += 1
 
-        # recarga inscritas para la fila seleccionada
         self._reload_inscritas_tab3()
 
     def filtrar_optativas_a_tab3(self):
@@ -587,7 +585,6 @@ class TabInscripciones(QObject):
         hi = self.optativas_listado_a_tab3.item(opt, 5).text()
         hf = self.optativas_listado_a_tab3.item(opt, 6).text()
 
-        # obtener id y cupo
         res = self.db.run_query(
             "SELECT id, cupo FROM optativas WHERE tipo='A' AND nombre=? AND dia=? AND inicio=? AND fin=?",
             (nombre, dia, hi, hf),
@@ -600,7 +597,19 @@ class TabInscripciones(QObject):
             "SELECT COUNT(*) FROM inscripciones WHERE optativa_id=?", (oid,), fetch="one"
         )[0]
         if count >= cupo:
-            QMessageBox.warning(self.widget, "Advertencia", f"La optativa '{nombre}' ya alcanzó su cupo.")
+            QMessageBox.warning(self.widget, "Advertencia", f"La asignatura '{nombre}' ya alcanzó su cupo.")
+            return
+
+        # límite por estado (1 A normal, 2 A si recursamiento)
+        estado_row = self.db.run_query("SELECT UPPER(estado) FROM estudiantes WHERE matricula=?", (mat,), fetch="one")
+        estado = (estado_row[0] if estado_row else "").upper()
+        max_por_tipo = 2 if estado in ("RECURSAMIENTO","RECURSAMIENTO PARALELO") else 1
+        actuales = self.db.run_query(
+            "SELECT COUNT(*) FROM inscripciones i JOIN optativas o ON i.optativa_id=o.id "
+            "WHERE i.matricula=? AND o.tipo='A'", (mat,), fetch="one"
+        )[0]
+        if actuales >= max_por_tipo:
+            QMessageBox.warning(self.widget, "Advertencia", f"Este estudiante ya tiene {actuales} Asignatura(s) A permitidas para su condición.")
             return
 
         # solapamiento con B
@@ -615,13 +624,11 @@ class TabInscripciones(QObject):
                 QMessageBox.warning(self.widget, "Advertencia", f"Se superpone con '{n2}'.")
                 return
 
-        # insertar
         self.db.run_query("INSERT INTO inscripciones(matricula, optativa_id) VALUES(?, ?)", (mat, oid))
 
-        # 🚀 recargas inmediatas
         self._reload_inscritas_tab3()
         self.cargar_optativas_a_tab3()
-        self.cargar_optativas_b_tab3()           # <— añadida
+        self.cargar_optativas_b_tab3()
         self._control_optativas_a_b_habilitadas()
         self.inscripciones_changed.emit()
 
@@ -637,7 +644,6 @@ class TabInscripciones(QObject):
         hi = self.optativas_listado_b_tab3.item(opt, 5).text()
         hf = self.optativas_listado_b_tab3.item(opt, 6).text()
 
-        # obtener id y cupo
         res = self.db.run_query(
             "SELECT id, cupo FROM optativas WHERE tipo='B' AND nombre=? AND dia=? AND inicio=? AND fin=?",
             (nombre, dia, hi, hf),
@@ -650,7 +656,18 @@ class TabInscripciones(QObject):
             "SELECT COUNT(*) FROM inscripciones WHERE optativa_id=?", (oid,), fetch="one"
         )[0]
         if count >= cupo:
-            QMessageBox.warning(self.widget, "Advertencia", f"La optativa '{nombre}' ya alcanzó su cupo.")
+            QMessageBox.warning(self.widget, "Advertencia", f"La asignatura '{nombre}' ya alcanzó su cupo.")
+            return
+
+        estado_row = self.db.run_query("SELECT UPPER(estado) FROM estudiantes WHERE matricula=?", (mat,), fetch="one")
+        estado = (estado_row[0] if estado_row else "").upper()
+        max_por_tipo = 2 if estado in ("RECURSAMIENTO","RECURSAMIENTO PARALELO") else 1
+        actuales = self.db.run_query(
+            "SELECT COUNT(*) FROM inscripciones i JOIN optativas o ON i.optativa_id=o.id "
+            "WHERE i.matricula=? AND o.tipo='B'", (mat,), fetch="one"
+        )[0]
+        if actuales >= max_por_tipo:
+            QMessageBox.warning(self.widget, "Advertencia", f"Este estudiante ya tiene {actuales} Asignatura(s) B permitidas para su condición.")
             return
 
         # solapamiento con A
@@ -665,13 +682,11 @@ class TabInscripciones(QObject):
                 QMessageBox.warning(self.widget, "Advertencia", f"Se superpone con '{n2}'.")
                 return
 
-        # insertar
         self.db.run_query("INSERT INTO inscripciones(matricula, optativa_id) VALUES(?, ?)", (mat, oid))
 
-        # 🚀 recargas inmediatas
         self._reload_inscritas_tab3()
         self.cargar_optativas_b_tab3()
-        self.cargar_optativas_a_tab3()           # <— añadida
+        self.cargar_optativas_a_tab3()
         self._control_optativas_a_b_habilitadas()
         self.inscripciones_changed.emit()
 

@@ -52,16 +52,16 @@ class TabOptativas(QObject):
 
         # ====== TAB A ======
         tab_a = QWidget(self.tabs)
-        self.tabs.addTab(tab_a, "Optativas A")
+        self.tabs.addTab(tab_a, "Asignaturas A")
 
-        self.btn_cargar_optativas_a = QPushButton("Cargar Optativas A (csv)", tab_a)
+        self.btn_cargar_optativas_a = QPushButton("Cargar Asignaturas A (csv)", tab_a)
         self.btn_cargar_optativas_a.setGeometry(575, 360, 200, 30)
 
         self.buscar_optativa_a = QLineEdit(tab_a)
-        self.buscar_optativa_a.setPlaceholderText("BUSCAR OPTATIVA A")
+        self.buscar_optativa_a.setPlaceholderText("BUSCAR ASIGNATURA A")
         self.buscar_optativa_a.setGeometry(470, 10, 300, 30)
 
-        lbl_a = QLabel("Optativas A", tab_a)
+        lbl_a = QLabel("Asignaturas A", tab_a)
         lbl_a.setAlignment(Qt.AlignmentFlag.AlignLeft)
         lbl_a.setGeometry(20, 10, 260, 30)
         lbl_a.setFont(QFont("Noto Sans", 20, QFont.Weight.Bold))
@@ -104,16 +104,16 @@ class TabOptativas(QObject):
 
         # ====== TAB B ======
         tab_b = QWidget(self.tabs)
-        self.tabs.addTab(tab_b, "Optativas B")
+        self.tabs.addTab(tab_b, "Asignaturas B")
 
-        self.btn_cargar_optativas_b = QPushButton("Cargar Optativas B (csv)", tab_b)
+        self.btn_cargar_optativas_b = QPushButton("Cargar Asignaturas B (csv)", tab_b)
         self.btn_cargar_optativas_b.setGeometry(575, 360, 200, 30)
 
         self.buscar_optativa_b = QLineEdit(tab_b)
-        self.buscar_optativa_b.setPlaceholderText("BUSCAR OPTATIVA B")
+        self.buscar_optativa_b.setPlaceholderText("BUSCAR ASIGNATURA B")
         self.buscar_optativa_b.setGeometry(470, 10, 300, 30)
 
-        lbl_b = QLabel("Optativas B", tab_b)
+        lbl_b = QLabel("Asignaturas B", tab_b)
         lbl_b.setAlignment(Qt.AlignmentFlag.AlignLeft)
         lbl_b.setGeometry(20, 10, 260, 30)
         lbl_b.setFont(QFont("Noto Sans", 20, QFont.Weight.Bold))
@@ -661,19 +661,42 @@ class TabOptativas(QObject):
         self.optativas_changed.emit()
 
     def _leer_csv_e_insertar(self, fn):
+        import csv
+
         with open(fn, newline="", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
+
             for row in reader:
-                vals = (
-                    row["tipo"].strip(), row["nombre"].strip(),
-                    row["rfc_docente"].strip(), row["rfc_segundo_docente"].strip(),
-                    row["semestres"].strip(),
-                    int(row["cupo"]) if row["cupo"] else 0,
-                    row.get("dia", "").strip(), row.get("inicio", "").strip(), row.get("fin", "").strip(),
-                    row.get("salon", "").strip(), row.get("ciclo", "").strip()
-                )
+                # Normalizar valores base
+                tipo = (row.get("tipo", "") or "").strip().upper()
+                nombre = (row.get("nombre", "") or "").strip()
+
+                # 1) Validaciones mínimas: descartar filas vacías
+                if tipo not in ("A", "B"):
+                    continue
+                if not nombre:
+                    continue  # No insertamos "A,,,,,0,,,,," y similares
+
+                rfc_docente = (row.get("rfc_docente", "") or "").strip()
+                rfc_seg = (row.get("rfc_segundo_docente", "") or "").strip() or None
+                semestres = (row.get("semestres", "") or "").strip()
+
+                # cupo entero (default 0)
+                cupo_raw = (row.get("cupo", "") or "").strip()
+                try:
+                    cupo = int(cupo_raw) if cupo_raw else 0
+                except ValueError:
+                    cupo = 0
+
+                dia = (row.get("dia", "") or "").strip()
+                inicio = (row.get("inicio", "") or "").strip()
+                fin = (row.get("fin", "") or "").strip()
+                salon = (row.get("salon", "") or "").strip()
+                ciclo = (row.get("ciclo", "") or "").strip()
+
+                # 2) Insert seguro
                 self.db.run_query(
-                    "INSERT INTO optativas(tipo,nombre,rfc_docente,rfc_segundo_docente,semestres,"
-                    "cupo,dia,inicio,fin,salon,ciclo) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                    vals
+                    "INSERT INTO optativas (tipo,nombre,rfc_docente,rfc_segundo_docente,semestres,cupo,dia,inicio,fin,salon,ciclo) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                    (tipo, nombre, rfc_docente, rfc_seg, semestres, cupo, dia, inicio, fin, salon, ciclo)
                 )

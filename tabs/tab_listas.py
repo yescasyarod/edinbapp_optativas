@@ -134,29 +134,57 @@ class TabListas:
 
         base = obtener_directorio_base()
         listas_path = os.path.join(base, "listas")
-        if os.path.exists(listas_path):
-            shutil.rmtree(listas_path)
-        os.makedirs(listas_path)
+
+        try:
+            if os.path.exists(listas_path):
+                import stat
+                def _onerror(func, path, exc_info):
+                    try:
+                        os.chmod(path, stat.S_IWRITE)
+                        func(path)
+                    except Exception:
+                        pass
+                shutil.rmtree(listas_path, onerror=_onerror)
+            os.makedirs(listas_path, exist_ok=True)
+        except Exception as e:
+            QMessageBox.warning(self.widget, "Listas", f"No se pudo limpiar la carpeta 'listas': {e}")
+            return
 
         ciclo_full = self.combo_ciclo_listas.currentText()
         parte_ciclo, parte_periodo = ciclo_full.split("/", 1)
         coord = self.line_coordinador.text().strip() or "SIN COORDINADOR"
 
         query = """
-            SELECT DISTINCT o.id,o.tipo,o.nombre,o.dia,o.inicio,o.fin,o.salon,
+            SELECT DISTINCT o.id,
+                            UPPER(TRIM(o.tipo)) as tipo,
+                            o.nombre,o.dia,o.inicio,o.fin,o.salon,
                             o.rfc_docente,o.rfc_segundo_docente
             FROM inscripciones i
             JOIN optativas o ON i.optativa_id=o.id
-            ORDER BY o.nombre
+            ORDER BY o.nombre, o.dia, o.inicio
         """
         ops = self.db.run_query(query, fetch="all")
         docs = self.db.run_query(
             "SELECT rfc,nombre||' '||apellido_paterno||' '||apellido_materno FROM docentes",
             fetch="all"
         )
-        doc_map = {r: nom for r, nom in docs}
+        doc_map = {r: nom for r, nom in (docs or [])}
 
-        for (opt_id, tipo, nombre_opt, dia, hi, hf, salon, r1, r2) in ops:
+        # detectar materias duplicadas por nombre+tipo
+        from collections import defaultdict
+        counts = defaultdict(int)
+        for _, tipo, nombre_opt, *_ in (ops or []):
+            counts[(tipo, nombre_opt)] += 1
+
+        for (opt_id, tipo, nombre_opt, dia, hi, hf, salon, r1, r2) in (ops or []):
+            tipo_norm = (tipo or "").strip().upper()
+            if tipo_norm not in ("A", "B"):
+                print(f"[WARN] Optativa sin tipo válido: {nombre_opt} -> '{tipo}'")
+                tipo_norm = "A"
+
+            tipo_sub = "Asignaturas_A" if tipo_norm == "A" else "Asignaturas_B"
+
+            # Docente
             if r2:
                 d1 = doc_map.get(r1, "Docente Sin Nombre")
                 d2 = doc_map.get(r2, "Docente Sin Nombre")
@@ -164,37 +192,51 @@ class TabListas:
             else:
                 docente_str = self._proc_doc(doc_map.get(r1, "Docente Sin Nombre"))
 
+            # Alumnos
             alumnos = self.db.run_query(
                 """SELECT e.matricula,e.nombre,e.apellido_paterno,e.apellido_materno,e.semestre
-                   FROM inscripciones i
-                   JOIN estudiantes e ON i.matricula=e.matricula
-                   WHERE i.optativa_id=? AND UPPER(e.estado)='ACTIVO'
-                   ORDER BY e.nombre,e.apellido_paterno,e.apellido_materno""",
+                FROM inscripciones i
+                JOIN estudiantes e ON i.matricula=e.matricula
+                WHERE i.optativa_id=? AND UPPER(e.estado) IN (
+                    'REGULAR','RECURSAMIENTO','RECURSAMIENTO PARALELO','MOVILIDAD PARCIAL','MOVILIDAD'
+                )
+                ORDER BY e.nombre,e.apellido_paterno,e.apellido_materno""",
                 (opt_id,), fetch="all"
             )
+
             sem_groups = {}
-            for mat, nom, ap, am, sem in alumnos:
+            for mat, nom, ap, am, sem in (alumnos or []):
                 sem_groups.setdefault(sem, []).append((mat, f"{ap} {am} {nom}".strip().upper()))
 
             for sem, lista in sem_groups.items():
-                tipo_sub = ("Optativas_A" if tipo == "A" else "Optativas_B")
-                sem_num = sem.replace("°", "")
-                carpeta = os.path.join(listas_path, tipo_sub, nombre_opt, f"semestre_{sem_num}")
+                sem_num = (sem or "").replace("°", "")
+                # Si la materia tiene más de una sesión (ej. Barnices martes y jueves),
+                # se crean subcarpetas por día
+                if counts[(tipo, nombre_opt)] > 1:
+                    carpeta = os.path.join(listas_path, tipo_sub, nombre_opt, f"semestre_{sem_num}", dia)
+                else:
+                    carpeta = os.path.join(listas_path, tipo_sub, nombre_opt, f"semestre_{sem_num}")
                 os.makedirs(carpeta, exist_ok=True)
+
                 tabla = {
                     "ciclo_escolar": parte_ciclo,
                     "periodo": parte_periodo,
                     "semestre": SEMESTRE_MAPA.get(sem, "DESCONOCIDO")
                 }
-                asign_text = ("Optativa Técnico - Tecnológica" if tipo == "A"
-                              else "Optativa Humanístico - Estética")
+                asign_text = ("Asignatura Técnico - Tecnológica" if tipo_norm == "A"
+                            else "Asignatura Humanístico - Estética")
                 horario = f"{dia} {hi} a {hf} hrs"
                 datos = {
-                    "tipo": tipo, "asignatura": asign_text, "curso": nombre_opt,
-                    "docente": docente_str, "coordinador(a)": coord,
-                    "horario": horario, "salon": salon
+                    "tipo": tipo_norm,
+                    "asignatura": asign_text,
+                    "curso": nombre_opt,
+                    "docente": docente_str,
+                    "coordinador(a)": coord,
+                    "horario": horario,
+                    "salon": salon
                 }
-                pdf_name = f"OP_{tipo}_{nombre_opt}_{sem}.pdf"
+
+                pdf_name = f"ASIG_{tipo_norm}_{nombre_opt}_{sem}.pdf"
                 out = os.path.join(carpeta, pdf_name)
                 try:
                     creacion_de_listas(tabla, datos, lista, out)
@@ -204,9 +246,25 @@ class TabListas:
         QMessageBox.information(self.widget, "Listas", "¡Listas generadas exitosamente!")
 
     def _proc_doc(self, nombre):
-        parts = nombre.split()
-        if len(parts) >= 3:
-            return f"{parts[0]} {parts[-2]}"
-        if len(parts) == 2:
-            return nombre
-        return nombre
+        """
+        Devuelve 'PrimerNombre ApellidoPaterno' evitando conectores cortos como 'y', 'e', 'de', 'del', etc.
+        Ej.: 'José Ramón Robleda y Castillo' -> 'José Robleda'
+        """
+        if not nombre:
+            return "Docente Sin Nombre"
+        parts = nombre.strip().split()
+        if not parts:
+            return "Docente Sin Nombre"
+
+        STOP = {"y","e","de","del","la","las","los","da","do","das","dos","van","von","di","della","delle","du","le"}
+        # Primer nombre (conserva el primero)
+        primer_nombre = parts[0]
+
+        # tomar candidatos de apellidos ignorando conectores de <=3 letras
+        apes = [p for p in parts[1:] if p.lower() not in STOP and len(p) > 2]
+        if not apes:
+            # si no se encontró, intenta alguno no vacío
+            apes = [p for p in parts[1:] if p.strip()]
+
+        apellido_paterno = apes[0] if apes else (parts[-1] if len(parts) > 1 else "")
+        return f"{primer_nombre} {apellido_paterno}"

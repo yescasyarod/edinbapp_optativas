@@ -40,13 +40,11 @@ class TabEstudiantes:
         self._tab = self.widget
         self._tab.setStyleSheet("background-color: white;")
 
-        # Label ESTUDIANTES
         self.label_estudiantes = QLabel("ESTUDIANTES", self._tab)
         self.label_estudiantes.setGeometry(40, 40, 231, 25)
         self.label_estudiantes.setFont(QFont("Noto Sans", 20, QFont.Weight.Bold))
         self.label_estudiantes.setStyleSheet("color: rgb(12, 28, 140);")
 
-        # Combo filtro semestre
         self.combo_filtrar_estudiantes = QComboBox(self._tab)
         self.combo_filtrar_estudiantes.setGeometry(290, 36, 201, 32)
         self.combo_filtrar_estudiantes.setFont(QFont("Noto Sans", 8, QFont.Weight.Bold))
@@ -58,7 +56,6 @@ class TabEstudiantes:
             ["Todos", "1°", "2°", "3°", "4°", "5°", "6°", "7°"]
         )
 
-        # Línea búsqueda
         self.line_buscar_estudiante = QLineEdit(self._tab)
         self.line_buscar_estudiante.setGeometry(710, 36, 481, 31)
         self.line_buscar_estudiante.setFont(QFont("Noto Sans", 8, QFont.Weight.Bold))
@@ -69,17 +66,14 @@ class TabEstudiantes:
         self.line_buscar_estudiante.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.line_buscar_estudiante.setPlaceholderText("BUSCAR ESTUDIANTE")
 
-        # Tabla estudiantes
         self.table_estudiantes = QTableWidget(self._tab)
-        # que seleccione filas completas y sólo una a la vez
+        from PySide6.QtWidgets import QAbstractItemView
+        from PySide6.QtGui import QPalette, QColor
         self.table_estudiantes.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table_estudiantes.setSelectionMode(QAbstractItemView.SingleSelection)
-
-        # evitar que la tabla borre la selección al perder foco o al hacer clic en un área vacía
-        #self.table_estudiantes.setAutoClearSelection(False)
         pal = self.table_estudiantes.palette()
-        pal.setColor(QPalette.Highlight, QColor("white"))             # fondo de la selección
-        pal.setColor(QPalette.HighlightedText, QColor(12, 28, 140))   # texto de la selección
+        pal.setColor(QPalette.Highlight, QColor("white"))
+        pal.setColor(QPalette.HighlightedText, QColor(12, 28, 140))
         self.table_estudiantes.setPalette(pal)
         self.table_estudiantes.setGeometry(40, 90, 1281, 361)
         self.table_estudiantes.setColumnCount(4)
@@ -95,7 +89,6 @@ class TabEstudiantes:
                 background-color: #d9dced;
                 alternate-background-color: #e8eaf4;
             }
-            /* Resalta siempre en blanco, tanto con foco como sin foco */
             QTableWidget::item:selected,
             QTableWidget::item:selected:active,
             QTableWidget::item:selected:!active {
@@ -112,7 +105,6 @@ class TabEstudiantes:
             "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
         )
 
-        # Botones EDITAR / QUITAR
         self.btn_editar_estudiante = QPushButton("EDITAR", self._tab)
         self.btn_editar_estudiante.setGeometry(1010, 460, 151, 31)
         self.btn_editar_estudiante.setFont(QFont("Noto Sans", 7, QFont.Weight.Bold))
@@ -129,7 +121,6 @@ class TabEstudiantes:
             "color: rgb(12,28,140); background-color:white;"
         )
 
-        # Sección AGREGAR
         self.label_agregar_estudiante = QLabel("AGREGAR ESTUDIANTE", self._tab)
         self.label_agregar_estudiante.setGeometry(40, 500, 231, 25)
         self.label_agregar_estudiante.setFont(
@@ -170,8 +161,9 @@ class TabEstudiantes:
         )
         self.line_apellido_mat_est.setPlaceholderText("APELLIDO MATERNO")
 
-        # >>> Cambio: matrícula con stylesheet para disabled
         self.line_matricula = QLineEdit(self._tab)
+        from PySide6.QtCore import QRegularExpression
+        from PySide6.QtGui import QRegularExpressionValidator
         self.line_matricula.setMaxLength(10)
         validator = QRegularExpressionValidator(QRegularExpression("[A-Za-z0-9]*"))
         self.line_matricula.setValidator(validator)
@@ -185,7 +177,6 @@ class TabEstudiantes:
         )
         self.line_matricula.setPlaceholderText("MATRÍCULA")
 
-        # >>> Cambio: semestre con stylesheet para disabled
         self.combo_semestre_est = QComboBox(self._tab)
         self.combo_semestre_est.setGeometry(600, 540, 201, 32)
         self.combo_semestre_est.setFont(QFont("Noto Sans", 8, QFont.Weight.Bold))
@@ -204,11 +195,17 @@ class TabEstudiantes:
             "border:1.5px solid #0c1c8c; border-radius:5px; "
             "color: rgb(96,102,140); background-color:white;"
         )
-        self.combo_estado.addItems(
-            ["Activo", "Baja Temporal", "Irregular", "Baja Definitiva"]
-        )
+        # << ESTADOS ACTUALIZADOS >>
+        self.combo_estado.addItems([
+            "REGULAR",
+            "RECURSAMIENTO",
+            "RECURSAMIENTO PARALELO",
+            "MOVILIDAD PARCIAL",
+            "MOVILIDAD",
+            "BAJA TEMPORAL",
+            "BAJA DEFINITIVA"
+        ])
 
-        # Botón AGREGAR
         self.btn_agregar_estudiante = QPushButton("AGREGAR", self._tab)
         self.btn_agregar_estudiante.setGeometry(40, 640, 151, 31)
         self.btn_agregar_estudiante.setFont(QFont("Noto Sans", 8, QFont.Weight.Bold))
@@ -217,7 +214,6 @@ class TabEstudiantes:
             "color: rgb(12,28,140); background-color:white;"
         )
 
-        # Botón CARGAR CSV (solo admin)
         self.btn_cargar_estudiantes_csv = QPushButton(
             "CARGAR ESTUDIANTES (CSV)", self._tab
         )

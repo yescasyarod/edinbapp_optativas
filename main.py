@@ -152,6 +152,8 @@ class MainWindow(QMainWindow):
         # DB y Settings
         self.db = db
         self.create_tables()
+        self._limpiar_optativas_vacias() 
+        self._migrar_estados_estudiantes()
         self.settings = settings
 
         # UI principal
@@ -191,7 +193,7 @@ class MainWindow(QMainWindow):
         self.tabWidget.addTab(self.tab_doc.widget, "DOCENTES")
 
         self.tab_opt = TabOptativas(self.db, is_admin=(self.role == "admin"))
-        self.tabWidget.addTab(self.tab_opt.widget, "OPTATIVAS")
+        self.tabWidget.addTab(self.tab_opt.widget, "ASIGNATURAS")
         
 
         self.tab_ins = TabInscripciones(self.db)
@@ -220,6 +222,23 @@ class MainWindow(QMainWindow):
         action_creditos = QAction("Créditos", self)
         action_creditos.triggered.connect(self.mostrar_creditos)
         self.menuBar().addAction(action_creditos)
+        # --- Menú Exportar ---
+        menu_exportar = self.menuBar().addMenu("Exportar")
+
+        act_exp_est = QAction("Estudiantes", self)
+        act_exp_doc = QAction("Docentes", self)
+        act_exp_opt = QAction("Asignaturas", self)
+        act_exp_ins = QAction("Inscripciones", self)
+
+        act_exp_est.triggered.connect(self.exportar_estudiantes_csv)
+        act_exp_doc.triggered.connect(self.exportar_docentes_csv)
+        act_exp_opt.triggered.connect(self.exportar_optativas_csv)
+        act_exp_ins.triggered.connect(self.exportar_inscripciones_csv)
+
+        menu_exportar.addAction(act_exp_est)
+        menu_exportar.addAction(act_exp_doc)
+        menu_exportar.addAction(act_exp_opt)
+        menu_exportar.addAction(act_exp_ins)
 
     def mostrar_creditos(self):
         # 1) Creamos el QMessageBox
@@ -259,6 +278,109 @@ class MainWindow(QMainWindow):
         # 6) Botón OK y mostrar
         msg.setStandardButtons(QMessageBox.Ok)
         msg.exec()
+
+    def _csv_base_path(self):
+        from utils import obtener_directorio_base
+        base = obtener_directorio_base()
+        path = os.path.join(base, "CSV")
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    def exportar_estudiantes_csv(self):
+        path = os.path.join(self._csv_base_path(), "estudiantes.csv")
+        rows = self.db.run_query(
+            "SELECT matricula,nombre,apellido_paterno,apellido_materno,semestre,estado "
+            "FROM estudiantes ORDER BY nombre,apellido_paterno,apellido_materno", fetch="all"
+        ) or []
+        import csv
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["matricula","nombre","apellido_paterno","apellido_materno","semestre","estado"])
+            w.writerows(rows)
+        QMessageBox.information(self, "Exportar", f"Estudiantes exportados en:\n{path}")
+
+    def exportar_docentes_csv(self):
+        path = os.path.join(self._csv_base_path(), "docentes.csv")
+        rows = self.db.run_query(
+            "SELECT rfc,nombre,apellido_paterno,apellido_materno FROM docentes "
+            "ORDER BY nombre,apellido_paterno,apellido_materno", fetch="all"
+        ) or []
+        import csv
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["rfc","nombre","apellido_paterno","apellido_materno"])
+            w.writerows(rows)
+        QMessageBox.information(self, "Exportar", f"Docentes exportados en:\n{path}")
+
+    def exportar_optativas_csv(self):
+        path = os.path.join(self._csv_base_path(), "asignaturas.csv")
+
+        # Sólo filas con nombre no vacío
+        rows = self.db.run_query(
+            """
+            SELECT
+                UPPER(TRIM(tipo)) AS tipo,
+                nombre,
+                rfc_docente,
+                COALESCE(rfc_segundo_docente, '') AS rfc_segundo_docente,
+                COALESCE(semestres, '') AS semestres,
+                COALESCE(cupo, 0) AS cupo,
+                COALESCE(dia, '') AS dia,
+                COALESCE(inicio, '') AS inicio,
+                COALESCE(fin, '') AS fin,
+                COALESCE(salon, '') AS salon,
+                COALESCE(ciclo, '') AS ciclo
+            FROM optativas
+            WHERE nombre IS NOT NULL AND TRIM(nombre) <> ''
+            ORDER BY
+                CASE UPPER(TRIM(tipo)) WHEN 'A' THEN 0 ELSE 1 END,
+                nombre COLLATE NOCASE,
+                dia COLLATE NOCASE,
+                inicio
+            """,
+            fetch="all"
+        ) or []
+
+        import csv
+        # UTF-8 con BOM para Excel
+        with open(path, "w", newline="", encoding="utf-8-sig") as f:
+            w = csv.writer(f)
+            w.writerow(["tipo","nombre","rfc_docente","rfc_segundo_docente","semestres",
+                        "cupo","dia","inicio","fin","salon","ciclo"])
+            w.writerows(rows)
+
+        QMessageBox.information(self, "Exportar", f"Optativas exportadas en:\n{path}")
+
+    def exportar_inscripciones_csv(self):
+        path = os.path.join(self._csv_base_path(), "inscripciones.csv")
+        # Matrícula, Nombre Completo, Tipo de Optativa, Semestre, Materia, Correo
+        rows = self.db.run_query(
+            """SELECT e.matricula, e.nombre, e.apellido_paterno, e.apellido_materno,
+                    e.semestre, o.tipo, o.nombre
+            FROM inscripciones i
+            JOIN estudiantes e ON e.matricula=i.matricula
+            JOIN optativas o ON o.id=i.optativa_id
+            ORDER BY e.nombre,e.apellido_paterno,e.apellido_materno,o.tipo,o.nombre""",
+            fetch="all"
+        ) or []
+
+        def correo_from(matricula, nombre, ap, am):
+            # Regla igual que en crear_listas: dis.{primerNombre}{apPat}{apMat}.{matricula[:2]}
+            primer_nombre = (nombre.split()[0] if nombre else "").lower()
+            ap_p = (ap or "").lower()
+            ap_m = (am or "").lower()
+            pref = (matricula or "")[:2].lower()
+            return f"dis.{primer_nombre}{ap_p}{ap_m}.{pref}@inba.edu.mx"
+
+        import csv
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["Matricula","Nombre Completo","Tipo de Optativa","Semestre","Materia","Correo"])
+            for m,n,ap,am,sem,tipo,nommat in rows:
+                nombre_comp = f"{n} {ap} {am}".strip()
+                w.writerow([m, nombre_comp, tipo, sem, nommat, correo_from(m,n,ap,am)])
+
+        QMessageBox.information(self, "Exportar", f"Inscripciones exportadas en:\n{path}")
 
     def create_tables(self):
         queries = [
@@ -312,6 +434,51 @@ class MainWindow(QMainWindow):
                 )
             except Exception:
                 pass
+
+    def _migrar_estados_estudiantes(self):
+        """
+        Migra estados antiguos a los nuevos para que Inscripciones no quede vacía.
+        ACTIVO -> REGULAR
+        IRREGULAR -> RECURSAMIENTO
+        (los demás se normalizan a mayúsculas)
+        """
+        try:
+            filas = self.db.run_query(
+                "SELECT matricula, UPPER(TRIM(estado)) FROM estudiantes", fetch="all"
+            ) or []
+            for mat, est in filas:
+                nuevo = est
+                if est == "ACTIVO":
+                    nuevo = "REGULAR"
+                elif est == "IRREGULAR":
+                    nuevo = "RECURSAMIENTO"
+                # Normaliza variantes comunes
+                elif est in ("BAJA TEMPORAL", "BAJA DEFINITIVA",
+                            "RECURSAMIENTO", "RECURSAMIENTO PARALELO",
+                            "MOVILIDAD PARCIAL", "MOVILIDAD", "REGULAR"):
+                    nuevo = est  # ya ok
+                else:
+                    # si viene en formato "Baja Temporal", etc., normaliza a mayúsculas exactas
+                    m = est.replace("Á","A").replace("É","E").replace("Í","I").replace("Ó","O").replace("Ú","U")
+                    if m in ("BAJA TEMPORAL","BAJA DEFINITIVA","RECURSAMIENTO","RECURSAMIENTO PARALELO",
+                            "MOVILIDAD PARCIAL","MOVILIDAD","REGULAR"):
+                        nuevo = m
+                if nuevo != est:
+                    self.db.run_query(
+                        "UPDATE estudiantes SET estado=? WHERE matricula=?",
+                        (nuevo, mat)
+                    )
+        except Exception as e:
+            print(f"[WARN] Migración de estados falló: {e}")
+    
+    def _limpiar_optativas_vacias(self):
+        try:
+            self.db.run_query(
+                "DELETE FROM optativas WHERE nombre IS NULL OR TRIM(nombre) = ''"
+            )
+        except Exception as e:
+            print(f"[WARN] Limpieza de optativas vacías falló: {e}")
+
 
 
 def load_font(rel_path: str):
