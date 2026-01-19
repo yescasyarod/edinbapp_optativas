@@ -421,19 +421,54 @@ class MainWindow(QMainWindow):
                     FOREIGN KEY(optativa_id) REFERENCES optativas(id)
                 )"""
         ]
+
+        # 1) Tablas principales
         for q in queries:
             self.db.run_query(q)
 
-        # Asegurar columna rfc_segundo_docente si migraste desde una versión vieja
-        pragma = self.db.run_query("PRAGMA table_info(optativas)", fetch="all")
+        # 2) Migración rfc_segundo_docente si hace falta
+        pragma = self.db.run_query("PRAGMA table_info(optativas)", fetch="all") or []
         cols = [c[1] for c in pragma]
         if "rfc_segundo_docente" not in cols:
             try:
-                self.db.run_query(
-                    "ALTER TABLE optativas ADD COLUMN rfc_segundo_docente TEXT"
-                )
+                self.db.run_query("ALTER TABLE optativas ADD COLUMN rfc_segundo_docente TEXT")
             except Exception:
                 pass
+
+        # 3) ✅ Tabla de estado para “versionado” (cambios en optativas)
+        self.db.run_query("""
+            CREATE TABLE IF NOT EXISTS app_state (
+                key TEXT PRIMARY KEY,
+                value INTEGER NOT NULL
+            )
+        """)
+        self.db.run_query("""
+            INSERT OR IGNORE INTO app_state(key, value)
+            VALUES ('optativas_version', 0)
+        """)
+
+        # 4) ✅ Triggers: cualquier INSERT/UPDATE/DELETE en optativas incrementa versión
+        self.db.run_query("""
+            CREATE TRIGGER IF NOT EXISTS trg_optativas_version_ins
+            AFTER INSERT ON optativas
+            BEGIN
+                UPDATE app_state SET value = value + 1 WHERE key='optativas_version';
+            END;
+        """)
+        self.db.run_query("""
+            CREATE TRIGGER IF NOT EXISTS trg_optativas_version_upd
+            AFTER UPDATE ON optativas
+            BEGIN
+                UPDATE app_state SET value = value + 1 WHERE key='optativas_version';
+            END;
+        """)
+        self.db.run_query("""
+            CREATE TRIGGER IF NOT EXISTS trg_optativas_version_del
+            AFTER DELETE ON optativas
+            BEGIN
+                UPDATE app_state SET value = value + 1 WHERE key='optativas_version';
+            END;
+        """)
 
     def _migrar_estados_estudiantes(self):
         """

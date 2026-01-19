@@ -1,15 +1,17 @@
 # proyecto/tabs/tab_inscripciones.py
 
-from PySide6.QtCore import Qt, QTime, QEvent, Signal, QObject
+from PySide6.QtCore import Qt, QTime, Signal, QObject
 from PySide6.QtWidgets import (
-    QWidget, QGridLayout, QComboBox, QLineEdit, QLabel,
+    QWidget, QComboBox, QLineEdit, QLabel,
     QTableWidget, QPushButton, QCheckBox, QHeaderView,
-    QMessageBox, QTableWidgetItem, QApplication
+    QMessageBox, QTableWidgetItem
 )
 from PySide6.QtGui import QFont
 
+
 class TabInscripciones(QObject):
     inscripciones_changed = Signal()
+
     def __init__(self, db):
         super().__init__()
         self.db = db
@@ -24,13 +26,82 @@ class TabInscripciones(QObject):
         self.cargar_estudiantes_tab3()
         if self.table_estudiantes_tab3.rowCount() > 0:
             self.table_estudiantes_tab3.selectRow(0)
+            self.table_estudiantes_tab3.setCurrentCell(0, 0)
+            self._on_estudiante_tab3_changed()
+
+    # ---------------------------
+    #   UI helpers (mac/win)
+    # ---------------------------
+    def _apply_table_theme(self, table: QTableWidget):
+        """
+        Tema QSS consistente (evita depender de palette(), que en macOS se comporta distinto).
+        """
+        table.setStyleSheet("""
+            QTableWidget {
+                background-color: #d9dced;
+                alternate-background-color: #e8eaf4;
+                gridline-color: #bfc4e0;
+
+                /* fallback selection (algunos estilos la usan) */
+                selection-background-color: white;
+                selection-color: rgb(12,28,140);
+            }
+
+            /* Selección cuando está activo */
+            QTableWidget::item:selected:active {
+                background: white;
+                color: rgb(12,28,140);
+            }
+
+            /* Selección cuando NO está activo (macOS suele cambiarlo) */
+            QTableWidget::item:selected:!active {
+                background: white;
+                color: rgb(12,28,140);
+            }
+
+            /* QTableWidget sin “halo”/outline */
+            QTableWidget:focus {
+                outline: none;
+            }
+
+            QHeaderView::section {
+                background-color: #bfc4e0;
+                font-weight: 700;
+                color: #0c1c8c;
+                padding: 6px;
+                border: 0px;
+                border-bottom: 1px solid #aab0d4;
+            }
+
+            QTableCornerButton::section {
+                background-color: #bfc4e0;
+                border: 0px;
+            }
+        """)
+
+        # Métricas consistentes (mac suele verse diferente si no fijas alturas)
+        table.setAlternatingRowColors(True)
+        table.verticalHeader().setDefaultSectionSize(26)  # alto de fila
+        table.horizontalHeader().setFixedHeight(32)       # alto header
+        table.verticalHeader().setVisible(False)          # look más parecido a Windows (opcional)
+        table.setWordWrap(False)
+        table.setTextElideMode(Qt.TextElideMode.ElideRight)
+
+        # Selección por filas
+        from PySide6.QtWidgets import QAbstractItemView
+        table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        table.setSelectionMode(QAbstractItemView.SingleSelection)
 
     def _setup_ui(self):
-        from PySide6.QtWidgets import QAbstractItemView
-        from PySide6.QtGui import QPalette, QColor
-
         # widget contenedor principal
         self.widget.setFixedSize(1360, 760)  # tamaño total de la pestaña
+
+        # Un pequeño QSS general para quitar outlines de foco en mac
+        self.widget.setStyleSheet("""
+            QLineEdit:focus, QComboBox:focus, QPushButton:focus, QCheckBox:focus {
+                outline: none;
+            }
+        """)
 
         # — Controles de filtro —
         self.combo_inscritos_tab3 = QComboBox(self.widget)
@@ -48,41 +119,27 @@ class TabInscripciones(QObject):
         # — Tabla Estudiantes —
         self.table_estudiantes_tab3 = QTableWidget(self.widget)
         self.table_estudiantes_tab3.setGeometry(10, 105, 400, 390)
-        self.table_estudiantes_tab3.setColumnCount(3)
+
+        # eran 3 columnas, pero luego escribías 4 (estado)
+        self.table_estudiantes_tab3.setColumnCount(4)
         self.table_estudiantes_tab3.setHorizontalHeaderLabels(
-            ["Matrícula", "Nombre", "Semestre"]
+            ["Matrícula", "Nombre", "Semestre", "Estado"]
         )
-        self.table_estudiantes_tab3.setAlternatingRowColors(True)
+
         hdr = self.table_estudiantes_tab3.horizontalHeader()
         hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
-        hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         self.table_estudiantes_tab3.setColumnWidth(1, 200)
-        self.table_estudiantes_tab3.setStyleSheet("""
-            QTableWidget {
-                background-color: #d9dced;
-                alternate-background-color: #e8eaf4;
-            }
-            QTableWidget::item:selected,
-            QTableWidget::item:selected:active,
-            QTableWidget::item:selected:!active {
-                background-color: white;
-                color: rgb(12,28,140);
-            }
-            QHeaderView::section {
-                background-color: #bfc4e0;
-                font-weight: bold;
-                color: #0c1c8c;
-            }
-        """)
+        # Ocultar columna "Estado" (col = 3)
+        self.table_estudiantes_tab3.setColumnHidden(3, True)
 
-        # selección: fila completa, única, fondo blanco + texto azul
-        self.table_estudiantes_tab3.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table_estudiantes_tab3.setSelectionMode(QAbstractItemView.SingleSelection)
-        pal_e = self.table_estudiantes_tab3.palette()
-        pal_e.setColor(QPalette.Highlight, QColor("white"))
-        pal_e.setColor(QPalette.HighlightedText, QColor(12, 28, 140))
-        self.table_estudiantes_tab3.setPalette(pal_e)
+        # (Opcional) ya que no se verá, puedes hacer que "Nombre" estire
+        hdr = self.table_estudiantes_tab3.horizontalHeader()
+        hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+
+        self._apply_table_theme(self.table_estudiantes_tab3)
 
         # — Checkboxes Ya cursó —
         self.chk_ya_curso_a = QCheckBox("Ya cursó Optativa A", self.widget)
@@ -99,7 +156,11 @@ class TabInscripciones(QObject):
         lbl_a = QLabel("Asignaturas A", self.widget)
         lbl_a.setGeometry(430, 25, 250, 40)
         lbl_a.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        lbl_a.setFont(QFont("Noto Sans", 20, QFont.Weight.Bold))
+        # Evita fijar familia no instalada en mac; usa la fuente del sistema y solo ajusta tamaño/peso
+        fa = lbl_a.font()
+        fa.setPointSize(20)
+        fa.setWeight(QFont.Weight.Bold)
+        lbl_a.setFont(fa)
         lbl_a.setStyleSheet("color: rgb(12, 28, 140);")
 
         self.optativas_listado_a_tab3 = QTableWidget(self.widget)
@@ -108,21 +169,7 @@ class TabInscripciones(QObject):
         self.optativas_listado_a_tab3.setHorizontalHeaderLabels(
             ["Optativa", "Docente", "Semestres", "Cupo", "Día", "Inicio", "Fin", "Salón"]
         )
-        self.optativas_listado_a_tab3.setAlternatingRowColors(True)
-        self.optativas_listado_a_tab3.setStyleSheet(
-            "background-color: #d9dced; alternate-background-color: #e8eaf4;"
-        )
-        self.optativas_listado_a_tab3.horizontalHeader().setStyleSheet(
-            "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
-        )
-
-        # selección en tabla A
-        self.optativas_listado_a_tab3.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.optativas_listado_a_tab3.setSelectionMode(QAbstractItemView.SingleSelection)
-        pal_a = self.optativas_listado_a_tab3.palette()
-        pal_a.setColor(QPalette.Highlight, QColor("white"))
-        pal_a.setColor(QPalette.HighlightedText, QColor(12, 28, 140))
-        self.optativas_listado_a_tab3.setPalette(pal_a)
+        self._apply_table_theme(self.optativas_listado_a_tab3)
 
         self.btn_inscribir_a = QPushButton("Inscribir A", self.widget)
         self.btn_inscribir_a.setGeometry(430, 415, 100, 30)
@@ -135,7 +182,10 @@ class TabInscripciones(QObject):
         lbl_b = QLabel("Asignaturas B", self.widget)
         lbl_b.setGeometry(860, 25, 250, 40)
         lbl_b.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        lbl_b.setFont(QFont("Noto Sans", 20, QFont.Weight.Bold))
+        fb = lbl_b.font()
+        fb.setPointSize(20)
+        fb.setWeight(QFont.Weight.Bold)
+        lbl_b.setFont(fb)
         lbl_b.setStyleSheet("color: rgb(12, 28, 140);")
 
         self.optativas_listado_b_tab3 = QTableWidget(self.widget)
@@ -144,21 +194,7 @@ class TabInscripciones(QObject):
         self.optativas_listado_b_tab3.setHorizontalHeaderLabels(
             ["Optativa", "Docente", "Semestres", "Cupo", "Día", "Inicio", "Fin", "Salón"]
         )
-        self.optativas_listado_b_tab3.setAlternatingRowColors(True)
-        self.optativas_listado_b_tab3.setStyleSheet(
-            "background-color: #d9dced; alternate-background-color: #e8eaf4;"
-        )
-        self.optativas_listado_b_tab3.horizontalHeader().setStyleSheet(
-            "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
-        )
-
-        # selección en tabla B
-        self.optativas_listado_b_tab3.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.optativas_listado_b_tab3.setSelectionMode(QAbstractItemView.SingleSelection)
-        pal_b = self.optativas_listado_b_tab3.palette()
-        pal_b.setColor(QPalette.Highlight, QColor("white"))
-        pal_b.setColor(QPalette.HighlightedText, QColor(12, 28, 140))
-        self.optativas_listado_b_tab3.setPalette(pal_b)
+        self._apply_table_theme(self.optativas_listado_b_tab3)
 
         self.btn_inscribir_b = QPushButton("Inscribir B", self.widget)
         self.btn_inscribir_b.setGeometry(860, 415, 100, 30)
@@ -167,7 +203,10 @@ class TabInscripciones(QObject):
         lbl_ins = QLabel("Inscritas", self.widget)
         lbl_ins.setGeometry(10, 510, 100, 20)
         lbl_ins.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        lbl_ins.setFont(QFont("Noto Sans", 12, QFont.Weight.Bold))
+        fi = lbl_ins.font()
+        fi.setPointSize(12)
+        fi.setWeight(QFont.Weight.Bold)
+        lbl_ins.setFont(fi)
         lbl_ins.setStyleSheet("color: rgb(12, 28, 140);")
 
         self.table_inscritas_tab3 = QTableWidget(self.widget)
@@ -176,59 +215,62 @@ class TabInscripciones(QObject):
         self.table_inscritas_tab3.setHorizontalHeaderLabels(
             ["Matrícula", "Asignatura", "Día", "Horario", "Docente"]
         )
-        self.table_inscritas_tab3.setAlternatingRowColors(True)
+        self._apply_table_theme(self.table_inscritas_tab3)
         self.table_inscritas_tab3.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.Stretch
         )
-        self.table_inscritas_tab3.setStyleSheet(
-            "background-color: #d9dced; alternate-background-color: #e8eaf4;"
-        )
-        self.table_inscritas_tab3.horizontalHeader().setStyleSheet(
-            "background-color: #bfc4e0; font-weight: bold; color: #0c1c8c;"
-        )
-
-        # selección en inscritas
-        self.table_inscritas_tab3.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table_inscritas_tab3.setSelectionMode(QAbstractItemView.SingleSelection)
-        pal_i = self.table_inscritas_tab3.palette()
-        pal_i.setColor(QPalette.Highlight, QColor("white"))
-        pal_i.setColor(QPalette.HighlightedText, QColor(12, 28, 140))
-        self.table_inscritas_tab3.setPalette(pal_i)
 
         self.btn_quitar_inscrita = QPushButton("Quitar Inscrita", self.widget)
         self.btn_quitar_inscrita.setGeometry(850, 580, 120, 30)
-
 
     def _connect_signals(self):
         self.combo_inscritos_tab3.currentIndexChanged.connect(self.cargar_estudiantes_tab3)
         self.combo_semestre_tab3.currentTextChanged.connect(self.cargar_estudiantes_tab3)
         self.line_search_estudiante_tab3.textChanged.connect(self.cargar_estudiantes_tab3)
+
         self.line_search_optativa_a.textChanged.connect(self.filtrar_optativas_a_tab3)
         self.line_search_optativa_b.textChanged.connect(self.filtrar_optativas_b_tab3)
+
         self.chk_ya_curso_a.stateChanged.connect(self._on_checkbox_ya_curso_changed)
         self.chk_ya_curso_b.stateChanged.connect(self._on_checkbox_ya_curso_changed)
+
+        # Señal original
         self.table_estudiantes_tab3.itemSelectionChanged.connect(self._on_estudiante_tab3_changed)
+
+        # FIX macOS: forzar disparo al click / cambio de celda current
+        self.table_estudiantes_tab3.currentCellChanged.connect(
+            lambda _cr, _cc, _pr, _pc: self._on_estudiante_tab3_changed()
+        )
+        self.table_estudiantes_tab3.cellClicked.connect(
+            lambda _r, _c: self._on_estudiante_tab3_changed()
+        )
+
         self.btn_inscribir_a.clicked.connect(self.inscribir_optativa_a)
         self.btn_inscribir_b.clicked.connect(self.inscribir_optativa_b)
         self.btn_quitar_inscrita.clicked.connect(self.quitar_inscrita)
 
     def cargar_estudiantes_tab3(self):
         self.table_estudiantes_tab3.setRowCount(0)
+
         # Estados permitidos para inscribir (excluye bajas)
-        estados_ok = ("REGULAR","RECURSAMIENTO","RECURSAMIENTO PARALELO","MOVILIDAD PARCIAL","MOVILIDAD")
-        placeholders = ",".join(["?"]*len(estados_ok))
+        estados_ok = ("REGULAR", "RECURSAMIENTO", "RECURSAMIENTO PARALELO", "MOVILIDAD PARCIAL", "MOVILIDAD")
+        placeholders = ",".join(["?"] * len(estados_ok))
+
         all_students = self.db.run_query(
             f"SELECT matricula, nombre, apellido_paterno, apellido_materno, semestre, estado "
             f"FROM estudiantes WHERE UPPER(estado) IN ({placeholders}) "
             f"ORDER BY nombre, apellido_paterno, apellido_materno",
-            tuple(estados_ok), fetch="all"
+            tuple(estados_ok),
+            fetch="all"
         )
+
         # map matrícula -> tipos inscritos
         tipos_map = {}
         for mat, *_ in all_students or []:
             rows = self.db.run_query(
                 "SELECT o.tipo FROM inscripciones i JOIN optativas o ON i.optativa_id=o.id WHERE i.matricula=?",
-                (mat,), fetch="all"
+                (mat,),
+                fetch="all"
             )
             tipos_map[mat] = {r[0] for r in rows} if rows else set()
 
@@ -240,9 +282,12 @@ class TabInscripciones(QObject):
         for mat, nom, ap, am, sem, est in all_students or []:
             if sem == "8°":
                 continue
+
             nombre_comp = f"{nom} {ap} {am}"
+
             if sem_sel != "Todos" and sem != sem_sel:
                 continue
+
             if texto and texto not in nombre_comp.lower():
                 continue
 
@@ -268,19 +313,34 @@ class TabInscripciones(QObject):
             self.table_estudiantes_tab3.setItem(row_idx, 3, QTableWidgetItem(est))
             row_idx += 1
 
-        self._reload_inscritas_tab3()
+        # Si no hay filas, limpia dependientes y listo
+        if self.table_estudiantes_tab3.rowCount() == 0:
+            self.table_inscritas_tab3.setRowCount(0)
+            self.optativas_listado_a_tab3.setRowCount(0)
+            self.optativas_listado_b_tab3.setRowCount(0)
+            return
+
+        # FIX macOS: asegurar selección + current cell para que currentRow() no sea -1
+        if self.table_estudiantes_tab3.currentRow() < 0:
+            self.table_estudiantes_tab3.selectRow(0)
+            self.table_estudiantes_tab3.setCurrentCell(0, 0)
+
+        # Forzar recarga dependiente (inscritas y optativas)
+        self._on_estudiante_tab3_changed()
 
     def filtrar_optativas_a_tab3(self):
         texto = self.line_search_optativa_a.text().lower().strip()
         for i in range(self.optativas_listado_a_tab3.rowCount()):
-            name = self.optativas_listado_a_tab3.item(i, 0).text().lower()
+            item = self.optativas_listado_a_tab3.item(i, 0)
+            name = item.text().lower() if item else ""
             hide = bool(texto) and (texto not in name)
             self.optativas_listado_a_tab3.setRowHidden(i, hide)
 
     def filtrar_optativas_b_tab3(self):
         texto = self.line_search_optativa_b.text().lower().strip()
         for i in range(self.optativas_listado_b_tab3.rowCount()):
-            name = self.optativas_listado_b_tab3.item(i, 0).text().lower()
+            item = self.optativas_listado_b_tab3.item(i, 0)
+            name = item.text().lower() if item else ""
             hide = bool(texto) and (texto not in name)
             self.optativas_listado_b_tab3.setRowHidden(i, hide)
 
@@ -317,24 +377,40 @@ class TabInscripciones(QObject):
         Guarda el estado de 'Ya cursó A/B' del estudiante anterior y restablece
         los checkboxes para el nuevo estudiante.
         """
+        # Asegura que haya fila válida (macOS: puede quedar currentRow=-1 tras repoblar)
+        new = self.table_estudiantes_tab3.currentRow()
+        if new < 0 and self.table_estudiantes_tab3.rowCount() > 0:
+            self.table_estudiantes_tab3.selectRow(0)
+            self.table_estudiantes_tab3.setCurrentCell(0, 0)
+            new = 0
+        if new < 0:
+            # no hay estudiantes
+            self.table_inscritas_tab3.setRowCount(0)
+            self.optativas_listado_a_tab3.setRowCount(0)
+            self.optativas_listado_b_tab3.setRowCount(0)
+            return
+
         old = self._last_tab3_student_row
+
         # 1) Guardar el estado de A/B del estudiante anterior
-        if old >= 0:
-            mat_old = self.table_estudiantes_tab3.item(old, 0).text()
-            self.ya_curso[mat_old] = (
-                self.chk_ya_curso_a.isChecked(),
-                self.chk_ya_curso_b.isChecked()
-            )
+        if old >= 0 and old < self.table_estudiantes_tab3.rowCount():
+            item_old = self.table_estudiantes_tab3.item(old, 0)
+            if item_old:
+                mat_old = item_old.text()
+                self.ya_curso[mat_old] = (
+                    self.chk_ya_curso_a.isChecked(),
+                    self.chk_ya_curso_b.isChecked()
+                )
 
         # 2) Actualizar índice de la nueva fila
-        new = self.table_estudiantes_tab3.currentRow()
         self._last_tab3_student_row = new
 
         # 3) Recuperar y aplicar el estado de checkboxes para el nuevo estudiante
-        if new >= 0:
-            mat_new = self.table_estudiantes_tab3.item(new, 0).text()
+        item_new = self.table_estudiantes_tab3.item(new, 0)
+        if item_new:
+            mat_new = item_new.text()
             yaA, yaB = self.ya_curso.get(mat_new, (False, False))
-            # Bloquear señales para evitar disparos accidentales
+
             self.chk_ya_curso_a.blockSignals(True)
             self.chk_ya_curso_b.blockSignals(True)
             self.chk_ya_curso_a.setChecked(yaA)
@@ -347,7 +423,6 @@ class TabInscripciones(QObject):
         self.cargar_optativas_a_tab3()
         self.cargar_optativas_b_tab3()
         self._control_optativas_a_b_habilitadas()
-
 
     def _on_checkbox_ya_curso_changed(self):
         row = self.table_estudiantes_tab3.currentRow()
@@ -364,6 +439,7 @@ class TabInscripciones(QObject):
         for i in range(self.table_estudiantes_tab3.rowCount()):
             if self.table_estudiantes_tab3.item(i, 0).text() == mat:
                 self.table_estudiantes_tab3.selectRow(i)
+                self.table_estudiantes_tab3.setCurrentCell(i, 0)
                 break
 
     def _control_optativas_a_b_habilitadas(self):
@@ -388,9 +464,16 @@ class TabInscripciones(QObject):
             (self.optativas_listado_b_tab3, insA)
         ):
             for i in range(table.rowCount()):
-                day = table.item(i, 4).text()
-                hi = table.item(i, 5).text()
-                hf = table.item(i, 6).text()
+                day_item = table.item(i, 4)
+                hi_item = table.item(i, 5)
+                hf_item = table.item(i, 6)
+                if not (day_item and hi_item and hf_item):
+                    continue
+
+                day = day_item.text()
+                hi = hi_item.text()
+                hf = hf_item.text()
+
                 conflict = any(
                     d2 == day and self.times_overlap(hi, hf, hi2, hf2)
                     for d2, hi2, hf2 in other_ins
@@ -410,7 +493,7 @@ class TabInscripciones(QObject):
         if row < 0:
             return
 
-        matricula  = self.table_estudiantes_tab3.item(row, 0).text()
+        matricula = self.table_estudiantes_tab3.item(row, 0).text()
         sem_alumno = self.table_estudiantes_tab3.item(row, 2).text()
 
         # Inscripciones B actuales (tipo 'B')
@@ -468,7 +551,6 @@ class TabInscripciones(QObject):
                    for d2, hi2, hf2 in insA_cur):
                 continue
 
-            # construir cadena de docentes
             docente = f"{d1n} {d1p} {d1m}"
             if d2n:
                 docente += f" & {d2n} {d2p} {d2m}"
@@ -488,14 +570,13 @@ class TabInscripciones(QObject):
             self.optativas_listado_a_tab3.setItem(i, 6, QTableWidgetItem(hf))
             self.optativas_listado_a_tab3.setItem(i, 7, QTableWidgetItem(sal))
 
-
     def cargar_optativas_b_tab3(self):
         self.optativas_listado_b_tab3.setRowCount(0)
         row = self.table_estudiantes_tab3.currentRow()
         if row < 0:
             return
 
-        matricula  = self.table_estudiantes_tab3.item(row, 0).text()
+        matricula = self.table_estudiantes_tab3.item(row, 0).text()
         sem_alumno = self.table_estudiantes_tab3.item(row, 2).text()
 
         # Inscripciones A actuales (tipo 'A')
@@ -553,7 +634,6 @@ class TabInscripciones(QObject):
                    for d2, hi2, hf2 in insB_cur):
                 continue
 
-            # construir cadena de docentes
             docente = f"{d1n} {d1p} {d1m}"
             if d2n:
                 docente += f" & {d2n} {d2p} {d2m}"
@@ -603,13 +683,16 @@ class TabInscripciones(QObject):
         # límite por estado (1 A normal, 2 A si recursamiento)
         estado_row = self.db.run_query("SELECT UPPER(estado) FROM estudiantes WHERE matricula=?", (mat,), fetch="one")
         estado = (estado_row[0] if estado_row else "").upper()
-        max_por_tipo = 2 if estado in ("RECURSAMIENTO","RECURSAMIENTO PARALELO") else 1
+        max_por_tipo = 2 if estado in ("RECURSAMIENTO", "RECURSAMIENTO PARALELO") else 1
         actuales = self.db.run_query(
             "SELECT COUNT(*) FROM inscripciones i JOIN optativas o ON i.optativa_id=o.id "
             "WHERE i.matricula=? AND o.tipo='A'", (mat,), fetch="one"
         )[0]
         if actuales >= max_por_tipo:
-            QMessageBox.warning(self.widget, "Advertencia", f"Este estudiante ya tiene {actuales} Asignatura(s) A permitidas para su condición.")
+            QMessageBox.warning(
+                self.widget, "Advertencia",
+                f"Este estudiante ya tiene {actuales} Asignatura(s) A permitidas para su condición."
+            )
             return
 
         # solapamiento con B
@@ -661,13 +744,16 @@ class TabInscripciones(QObject):
 
         estado_row = self.db.run_query("SELECT UPPER(estado) FROM estudiantes WHERE matricula=?", (mat,), fetch="one")
         estado = (estado_row[0] if estado_row else "").upper()
-        max_por_tipo = 2 if estado in ("RECURSAMIENTO","RECURSAMIENTO PARALELO") else 1
+        max_por_tipo = 2 if estado in ("RECURSAMIENTO", "RECURSAMIENTO PARALELO") else 1
         actuales = self.db.run_query(
             "SELECT COUNT(*) FROM inscripciones i JOIN optativas o ON i.optativa_id=o.id "
             "WHERE i.matricula=? AND o.tipo='B'", (mat,), fetch="one"
         )[0]
         if actuales >= max_por_tipo:
-            QMessageBox.warning(self.widget, "Advertencia", f"Este estudiante ya tiene {actuales} Asignatura(s) B permitidas para su condición.")
+            QMessageBox.warning(
+                self.widget, "Advertencia",
+                f"Este estudiante ya tiene {actuales} Asignatura(s) B permitidas para su condición."
+            )
             return
 
         # solapamiento con A

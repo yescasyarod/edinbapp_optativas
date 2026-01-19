@@ -5,10 +5,13 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton
-
-from PySide6.QtGui import QIcon, QFontDatabase, QFont
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QLabel, QPushButton, QStyleFactory
+)
+from PySide6.QtGui import (
+    QIcon, QFontDatabase, QFont, QPalette, QColor
+)
+from PySide6.QtCore import Qt, QTimer
 
 from base_datos import Database
 from utils import obtener_ruta, obtener_ruta_bd
@@ -78,6 +81,41 @@ def create_tables(db: Database):
         except Exception:
             pass
 
+    # ✅ Tabla de estado (contador de cambios)
+    db.run_query("""
+        CREATE TABLE IF NOT EXISTS app_state (
+            key TEXT PRIMARY KEY,
+            value INTEGER NOT NULL
+        )
+    """)
+    db.run_query("""
+        INSERT OR IGNORE INTO app_state(key, value)
+        VALUES ('optativas_version', 0)
+    """)
+
+    # ✅ Triggers: cualquier cambio en optativas incrementa versión
+    db.run_query("""
+        CREATE TRIGGER IF NOT EXISTS trg_optativas_version_ins
+        AFTER INSERT ON optativas
+        BEGIN
+            UPDATE app_state SET value = value + 1 WHERE key='optativas_version';
+        END;
+    """)
+    db.run_query("""
+        CREATE TRIGGER IF NOT EXISTS trg_optativas_version_upd
+        AFTER UPDATE ON optativas
+        BEGIN
+            UPDATE app_state SET value = value + 1 WHERE key='optativas_version';
+        END;
+    """)
+    db.run_query("""
+        CREATE TRIGGER IF NOT EXISTS trg_optativas_version_del
+        AFTER DELETE ON optativas
+        BEGIN
+            UPDATE app_state SET value = value + 1 WHERE key='optativas_version';
+        END;
+    """)
+
 
 def limpiar_optativas_vacias(db: Database):
     try:
@@ -132,11 +170,24 @@ class VentanaInscripciones(QMainWindow):
         # Crear la pestaña tal como está (SIN editar tab_inscripciones.py)
         self.tab_ins = TabInscripciones(self.db)
 
+        # Hacer que el área visible no cambie por plataforma (evita recortes distintos en mac)
+        self.tab_ins.widget.setFixedSize(1300, 710)
+
         # Inyectar label + reacomodar geometrías desde AQUÍ
         self._personalizar_ui_alumnos()
 
         self.setCentralWidget(self.tab_ins.widget)
-    
+
+        # ─────────────────────────────────────────────────────────────
+        # ✅ “Live refresh” multi-app: detectar cambios de optativas (cupo, etc.)
+        # ─────────────────────────────────────────────────────────────
+        self._last_optativas_version = self._get_optativas_version()
+
+        self._timer_db = QTimer(self)
+        self._timer_db.setInterval(400)  # ms (ajusta 250-500 si quieres más/menos “instantáneo”)
+        self._timer_db.timeout.connect(self._watch_optativas_changes)
+        self._timer_db.start()
+
     def _on_siguiente_clicked(self):
         """
         Limpia los 3 campos de búsqueda al presionar 'Siguiente'.
@@ -190,6 +241,19 @@ class VentanaInscripciones(QMainWindow):
             }
             QPushButton:pressed {
                 background-color: #0a0f3e;
+            }
+        """
+
+        # ✅ SOLO PARA QUE EN mac SE VEA EL TEXTO "Ya cursó Optativa" SIN CAMBIAR TODO
+        chk_style = """
+            QCheckBox {
+                color: rgb(12,28,140);
+                font: bold 13px "Noto Sans";
+                spacing: 8px;
+            }
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
             }
         """
 
@@ -287,10 +351,12 @@ class VentanaInscripciones(QMainWindow):
             self.tab_ins.btn_inscribir_b.setGeometry(860, y_btn_opt, 130, 34)
 
         if hasattr(self.tab_ins, "chk_ya_curso_a"):
-            self.tab_ins.chk_ya_curso_a.setGeometry(715, y_btn_opt, 200, 25)
+            self.tab_ins.chk_ya_curso_a.setGeometry(690, y_btn_opt, 200, 25)
+            self.tab_ins.chk_ya_curso_a.setStyleSheet(chk_style)
 
         if hasattr(self.tab_ins, "chk_ya_curso_b"):
-            self.tab_ins.chk_ya_curso_b.setGeometry(1145, y_btn_opt, 200, 25)
+            self.tab_ins.chk_ya_curso_b.setGeometry(1120, y_btn_opt, 200, 25)
+            self.tab_ins.chk_ya_curso_b.setStyleSheet(chk_style)
 
         # ===== 8) Tabla inscritas + botón Quitar debajo =====
         if hasattr(self.tab_ins, "table_inscritas_tab3"):
@@ -308,7 +374,7 @@ class VentanaInscripciones(QMainWindow):
             x_next = geo.x() + geo.width() + 20
             y_next = geo.y() + int((geo.height() - 34) / 2)
 
-            # Label Paso 5: alineado verticalmente con el "4.- Revisa..." (usa y_lbl4)
+            # Label Paso 5 (como lo dejaste)
             self.lbl_paso_5 = QLabel("5.- Presiona Siguiente", self.tab_ins.widget)
             self.lbl_paso_5.setGeometry(x_next, y_lbl4 + 32, 420, 30)
             self.lbl_paso_5.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -327,14 +393,62 @@ class VentanaInscripciones(QMainWindow):
         if hasattr(self, "lbl_paso_5"):
             self.lbl_paso_5.raise_()
 
+    def _get_optativas_version(self) -> int:
+        row = self.db.run_query(
+            "SELECT value FROM app_state WHERE key='optativas_version'",
+            fetch="one"
+        )
+        try:
+            return int(row[0]) if row else 0
+        except Exception:
+            return 0
+
+    def _watch_optativas_changes(self):
+        v = self._get_optativas_version()
+        if v == self._last_optativas_version:
+            return
+
+        self._last_optativas_version = v
+
+        # ✅ Refresca solo lo que depende del cupo (sin mover la selección de alumno)
+        try:
+            self.tab_ins.cargar_optativas_a_tab3()
+            self.tab_ins.cargar_optativas_b_tab3()
+            self.tab_ins._control_optativas_a_b_habilitadas()
+        except Exception as e:
+            print(f"[WARN] Refresh optativas falló: {e}")
+
 if __name__ == "__main__":
     load_dotenv()
+
     app = QApplication(sys.argv)
 
+    # --- Forzar estilo consistente (mac/Windows/Linux) ---
+    app.setStyle(QStyleFactory.create("Fusion"))
+
+    # --- Paleta base para evitar variaciones de fondo/controles en mac ---
+    pal = app.palette()
+    pal.setColor(QPalette.Window, QColor("white"))
+    pal.setColor(QPalette.Base, QColor("white"))
+    pal.setColor(QPalette.AlternateBase, QColor("#e8eaf4"))
+    pal.setColor(QPalette.Button, QColor("white"))
+    pal.setColor(QPalette.Text, QColor("black"))
+    pal.setColor(QPalette.ButtonText, QColor("black"))
+    pal.setColor(QPalette.Highlight, QColor(12, 28, 140))
+    pal.setColor(QPalette.HighlightedText, QColor("white"))
+    app.setPalette(pal)
+
+    # --- DPI: ayuda a reducir diferencias en mac retina ---
+    QApplication.setHighDpiScaleFactorRoundingPolicy(
+        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+    )
+
+    # Cargar fuente embebida
     noto_family = load_font("fuentes/NotoSans-VariableFont.ttf")
     if noto_family:
         app.setFont(QFont(noto_family, 12))
 
+    # Mantener tu estilo global mínimo (como te gusta)
     app.setStyleSheet("""
         QTableWidget, QTableWidget QTableView, QTableWidget::item {
             color: black;
