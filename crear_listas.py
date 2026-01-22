@@ -7,13 +7,13 @@ from reportlab.pdfbase import pdfmetrics
 import os
 import sys
 
-from utils import obtener_ruta
+from utils import obtener_ruta, obtener_ruta_recurso
 
 
-# Registrar la fuente Montserrat
-pdfmetrics.registerFont(TTFont("Montserrat", obtener_ruta("fuentes/Montserrat-Regular.ttf")))
-pdfmetrics.registerFont(TTFont("Montserrat-Bold", obtener_ruta("fuentes/Montserrat-Bold.ttf")))
-pdfmetrics.registerFont(TTFont("Montserrat-ExtraBold", obtener_ruta("fuentes/Montserrat-ExtraBold.ttf")))
+# Registrar la fuente Montserrat (✅ ahora como recurso empaquetado)
+pdfmetrics.registerFont(TTFont("Montserrat", obtener_ruta_recurso("fuentes/Montserrat-Regular.ttf")))
+pdfmetrics.registerFont(TTFont("Montserrat-Bold", obtener_ruta_recurso("fuentes/Montserrat-Bold.ttf")))
+pdfmetrics.registerFont(TTFont("Montserrat-ExtraBold", obtener_ruta_recurso("fuentes/Montserrat-ExtraBold.ttf")))
 
 def creacion_de_listas(tabla1="", tabla2="", tabla3="", nombre=""):
     tabla3_sorted = sorted(
@@ -23,8 +23,14 @@ def creacion_de_listas(tabla1="", tabla2="", tabla3="", nombre=""):
             alumno[1].split()[1] if len(alumno[1].split()) > 1 else ""
         )
     )
+
     # Asegurar extensión correcta (evita .pdf.pdf)
     pdf_file = nombre if str(nombre).lower().endswith(".pdf") else f"{nombre}.pdf"
+
+    # ✅ Guardar junto al exe (o junto al proyecto en dev) si te pasan solo un nombre
+    if not os.path.isabs(pdf_file):
+        pdf_file = obtener_ruta(pdf_file)
+
     c = canvas.Canvas(pdf_file, pagesize=landscape(letter))
 
     # --- Tabla superior (data_0) ---
@@ -53,20 +59,21 @@ def creacion_de_listas(tabla1="", tabla2="", tabla3="", nombre=""):
     table_0.drawOn(c, 303, 526)
 
     # --- Imágenes ---
-    # Imagen de "cultura"
-    imagen_path_0 = obtener_ruta("imagenes/cultura_inba.png")
+    # Imagen de "cultura" (✅ como recurso empaquetado)
+    imagen_path_0 = obtener_ruta_recurso("imagenes/cultura_inba.png")
     x_pos_0 = 42
     y_pos_0 = 548
     ancho_0 = 683
-    alto_0 = 117 
+    alto_0 = 117
     escala_0 = 0.31
     c.drawImage(imagen_path_0, x_pos_0, y_pos_0, width=ancho_0 * escala_0, height=alto_0 * escala_0, preserveAspectRatio=True, mask='auto')
-    # Imagen del logo "edinba"
-    imagen_path = obtener_ruta("imagenes/edinba_logo.jpg")
+
+    # Imagen del logo "edinba" (✅ como recurso empaquetado)
+    imagen_path = obtener_ruta_recurso("imagenes/edinba_logo.jpg")
     x_pos = 574
     y_pos = 556
-    ancho = 162 
-    alto = 38 
+    ancho = 162
+    alto = 38
     escala = 0.71
     c.drawImage(imagen_path, x_pos, y_pos, width=ancho * escala, height=alto * escala, preserveAspectRatio=True, mask='auto')
 
@@ -137,9 +144,11 @@ def creacion_de_listas(tabla1="", tabla2="", tabla3="", nombre=""):
     for i in range(2, num_rows_2):
         data[i][0] = start_number
         start_number += 1
+
     # Usar la lista ordenada para colocar los nombres en la tabla
     for i, alumno in enumerate(tabla3_sorted):
         data[i + 2][1] = alumno[1].title()
+
     data[1][0] = "NO."
     data[1][1] = "NOMBRE"
     data[0][2] = "ASISTENCIA"
@@ -181,8 +190,8 @@ def creacion_de_listas(tabla1="", tabla2="", tabla3="", nombre=""):
     table_2.drawOn(c, 42, 140)
 
     # --- Línea y texto final ---
-    x1, y1 = 540, 110 
-    x2, y2 = 690, 110 
+    x1, y1 = 540, 110
+    x2, y2 = 690, 110
     c.setLineWidth(1.5)
     c.line(x1, y1, x2, y2)
     texto_x = x1 + 30
@@ -208,7 +217,7 @@ def creacion_de_listas(tabla1="", tabla2="", tabla3="", nombre=""):
         matricula_prefix = matricula[:2].lower() if matricula else ""
         correo = f"dis.{primer_nombre.lower()}{ap_paterno.lower()}{ap_materno.lower()}.{matricula_prefix}@inba.edu.mx"
         emails.append(correo)
-        
+
     # Crear la segunda página
     c.showPage()
     c.setFont("Montserrat", 10)
@@ -224,7 +233,6 @@ def creacion_de_listas(tabla1="", tabla2="", tabla3="", nombre=""):
     for correo in emails:
         c.drawString(x_inicial, y_inicial, correo + ",")
         y_inicial -= linea_espaciado
-
 
     # Guardar el PDF
     c.save()

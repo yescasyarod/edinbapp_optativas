@@ -4,7 +4,6 @@
 import sys
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 
 # ── Qt ──────────────────────────────────────────────────────────
 from PySide6.QtWidgets import (
@@ -18,7 +17,7 @@ from PySide6.QtCore import QSettings, Qt
 # ── Tu código ───────────────────────────────────────────────────
 from base_datos import Database
 from crear_listas import creacion_de_listas
-from utils import obtener_ruta, obtener_ruta_bd, SEMESTRE_MAPA
+from utils import obtener_ruta, obtener_ruta_bd, obtener_ruta_recurso, cargar_env, SEMESTRE_MAPA
 
 from tabs.tab_estudiantes import TabEstudiantes
 from tabs.tab_docentes import TabDocentes
@@ -34,7 +33,7 @@ class LoginDialog(QDialog):
 
         # — Mismo título e ícono que el MainWindow —
         self.setWindowTitle("EDINBA: Estudiantes & Docentes - Optativas - Listas")
-        self.setWindowIcon(QIcon(obtener_ruta("edinba_logo.ico")))
+        self.setWindowIcon(QIcon(obtener_ruta_recurso("edinba_logo.ico")))
 
         # — Mismo tamaño que el programa principal —
         self.setFixedSize(1366, 768)
@@ -146,13 +145,13 @@ class MainWindow(QMainWindow):
         # — Deshabilitar el botón de maximizar —
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
 
-        # Ícono
-        self.setWindowIcon(QIcon(obtener_ruta("edinba_logo.ico")))
+        # Ícono (✅ ahora empaquetado)
+        self.setWindowIcon(QIcon(obtener_ruta_recurso("edinba_logo.ico")))
 
         # DB y Settings
         self.db = db
         self.create_tables()
-        self._limpiar_optativas_vacias() 
+        self._limpiar_optativas_vacias()
         self._migrar_estados_estudiantes()
         self.settings = settings
 
@@ -194,7 +193,7 @@ class MainWindow(QMainWindow):
 
         self.tab_opt = TabOptativas(self.db, is_admin=(self.role == "admin"))
         self.tabWidget.addTab(self.tab_opt.widget, "ASIGNATURAS")
-        
+
 
         self.tab_ins = TabInscripciones(self.db)
         self.tabWidget.addTab(self.tab_ins.widget, "INSCRIPCIONES")
@@ -531,7 +530,7 @@ def load_font(rel_path: str):
 
 
 if __name__ == "__main__":
-    load_dotenv()  # requiere python-dotenv y un .env en la raíz
+    cargar_env()  # requiere python-dotenv y un .env en la raíz
     app = QApplication(sys.argv)
 
     # ─────────────────────────────────────────────────────────────

@@ -3,7 +3,6 @@
 
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QLabel, QPushButton, QStyleFactory
@@ -14,7 +13,7 @@ from PySide6.QtGui import (
 from PySide6.QtCore import Qt, QTimer
 
 from base_datos import Database
-from utils import obtener_ruta, obtener_ruta_bd
+from utils import obtener_ruta, obtener_ruta_bd, obtener_ruta_recurso, cargar_env
 from tabs.tab_inscripciones import TabInscripciones
 
 
@@ -165,7 +164,7 @@ class VentanaInscripciones(QMainWindow):
 
         self.setWindowTitle("EDINBA - Inscripciones (Alumnos)")
         self.setFixedSize(1300, 710)
-        self.setWindowIcon(QIcon(obtener_ruta("edinba_logo.ico")))
+        self.setWindowIcon(QIcon(obtener_ruta_recurso("edinba_logo.ico")))
 
         # Crear la pestaña tal como está (SIN editar tab_inscripciones.py)
         self.tab_ins = TabInscripciones(self.db)
@@ -175,6 +174,7 @@ class VentanaInscripciones(QMainWindow):
 
         # Inyectar label + reacomodar geometrías desde AQUÍ
         self._personalizar_ui_alumnos()
+        self._reordenar_columnas_cupo_semestres()
 
         self.setCentralWidget(self.tab_ins.widget)
 
@@ -393,6 +393,68 @@ class VentanaInscripciones(QMainWindow):
         if hasattr(self, "lbl_paso_5"):
             self.lbl_paso_5.raise_()
 
+    def _reordenar_columnas_cupo_semestres(self):
+        """
+        Reordena visualmente las columnas en las tablas de optativas:
+        - Semestres queda penúltimo
+        - Cupo queda al final
+        No modifica datos; solo el orden de columnas (header moveSection).
+        """
+
+        def reordenar_tabla(tabla):
+            if tabla is None:
+                return
+
+            try:
+                header = tabla.horizontalHeader()
+                col_count = tabla.columnCount()
+                if col_count <= 1:
+                    return
+
+                # Encuentra columnas por nombre (case-insensitive)
+                idx_cupo = None
+                idx_semestres = None
+
+                for col in range(col_count):
+                    item = tabla.horizontalHeaderItem(col)
+                    texto = (item.text() if item else "").strip().lower()
+                    if texto == "cupo":
+                        idx_cupo = col
+                    elif texto == "semestres":
+                        idx_semestres = col
+
+                # Si no existen, no hacemos nada
+                if idx_cupo is None and idx_semestres is None:
+                    return
+
+                # Lista de columnas en su orden visual actual (por índice lógico)
+                orden_actual = sorted(range(col_count), key=lambda logical: header.visualIndex(logical))
+
+                # Quita cupo/semestres (si están)
+                orden_filtrado = [i for i in orden_actual if i not in (idx_semestres, idx_cupo)]
+
+                # Agrega semestres penúltimo y cupo último (si existen)
+                if idx_semestres is not None:
+                    orden_filtrado.append(idx_semestres)
+                if idx_cupo is not None:
+                    orden_filtrado.append(idx_cupo)
+
+                # Aplica orden moviendo secciones
+                for target_pos, logical_idx in enumerate(orden_filtrado):
+                    current_pos = header.visualIndex(logical_idx)
+                    if current_pos != target_pos:
+                        header.moveSection(current_pos, target_pos)
+
+            except Exception as e:
+                print(f"[WARN] No se pudo reordenar columnas: {e}")
+
+        # Tablas donde quieres el cambio visual
+        reordenar_tabla(getattr(self.tab_ins, "optativas_listado_a_tab3", None))
+        reordenar_tabla(getattr(self.tab_ins, "optativas_listado_b_tab3", None))
+
+        # Si también quieres en la tabla de inscritas (si aplica), descomenta:
+        # reordenar_tabla(getattr(self.tab_ins, "table_inscritas_tab3", None))
+
     def _get_optativas_version(self) -> int:
         row = self.db.run_query(
             "SELECT value FROM app_state WHERE key='optativas_version'",
@@ -419,7 +481,7 @@ class VentanaInscripciones(QMainWindow):
             print(f"[WARN] Refresh optativas falló: {e}")
 
 if __name__ == "__main__":
-    load_dotenv()
+    cargar_env()
 
     app = QApplication(sys.argv)
 
